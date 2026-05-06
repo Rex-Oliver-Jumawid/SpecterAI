@@ -63,7 +63,7 @@ export default function LandingPage() {
 
       {/* ═══ HERO WITH SMOKE ═══ */}
       <section className="landing-hero">
-        <SmokeBackground color="#7c3aed" />
+        <SmokeBackground color="#2563eb" />
         <div className="hero-overlay" />
         <div className={`hero-content ${heroVisible ? 'visible' : ''}`}>
           <div className="hero-pill">
@@ -88,23 +88,54 @@ export default function LandingPage() {
               See Features
             </a>
           </div>
+        </div>
 
-          {/* Stats */}
-          <div className="hero-stats">
-            <div className="hero-stat">
-              <span className="stat-num">∞</span>
-              <span className="stat-label">AI Drafts</span>
+        {/* Mockup Window */}
+        <div className="hero-mockup">
+          <div className="mockup-window">
+            <div className="mockup-topbar">
+              <div className="mockup-dots"><span /><span /><span /></div>
+              <span style={{ fontSize: '0.6rem', color: '#666' }}>specter — notebook</span>
             </div>
-            <div className="hero-stat-divider" />
-            <div className="hero-stat">
-              <span className="stat-num">200M+</span>
-              <span className="stat-label">Academic Papers</span>
+            <div className="mockup-body">
+              <div className="mockup-sidebar">
+                <div className="mockup-line w60" />
+                <div className="mockup-line w40" />
+                <div className="mockup-line w80" />
+                <div className="mockup-line w50" />
+              </div>
+              <div className="mockup-editor">
+                <div className="mockup-line w90" style={{ height: '8px', marginBottom: '12px' }} />
+                <div className="mockup-line w100" />
+                <div className="mockup-line w95" />
+                <div className="mockup-line w80" />
+                <div className="mockup-line w100" />
+                <div className="mockup-line w70" />
+              </div>
+              <div className="mockup-panel">
+                <div className="mockup-line w60" />
+                <div className="mockup-card" />
+                <div className="mockup-card" />
+              </div>
             </div>
-            <div className="hero-stat-divider" />
-            <div className="hero-stat">
-              <span className="stat-num">Free</span>
-              <span className="stat-label">During Beta</span>
-            </div>
+          </div>
+        </div>
+
+        {/* Stats */}
+        <div className="hero-stats">
+          <div className="hero-stat">
+            <span className="stat-num">∞</span>
+            <span className="stat-label">AI Drafts</span>
+          </div>
+          <div className="hero-stat-divider" />
+          <div className="hero-stat">
+            <span className="stat-num">200M+</span>
+            <span className="stat-label">Academic Papers</span>
+          </div>
+          <div className="hero-stat-divider" />
+          <div className="hero-stat">
+            <span className="stat-num">Free</span>
+            <span className="stat-label">During Beta</span>
           </div>
         </div>
       </section>
