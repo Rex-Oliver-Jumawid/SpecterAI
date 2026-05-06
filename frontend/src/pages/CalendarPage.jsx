@@ -1,9 +1,10 @@
 import React, { useState, useMemo } from 'react';
-import { FiChevronLeft, FiChevronRight, FiPlus, FiPlay, FiTrash2, FiClock, FiZap, FiSearch, FiChevronDown, FiChevronRight as FiRight, FiBookOpen, FiCalendar } from 'react-icons/fi';
+import { FiChevronLeft, FiChevronRight, FiPlus, FiPlay, FiTrash2, FiClock, FiZap, FiSearch, FiChevronDown, FiChevronRight as FiRight, FiBookOpen, FiCalendar, FiSidebar } from 'react-icons/fi';
 
 export default function CalendarPage({ plans, onCreatePlanForNotebook, onDeletePlan, onTriggerAi, allNotebooks = [] }) {
   const [viewDate, setViewDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(null);
+  const [showRightPanel, setShowRightPanel] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [title, setTitle] = useState('');
   const [outline, setOutline] = useState('');
@@ -75,6 +76,7 @@ export default function CalendarPage({ plans, onCreatePlanForNotebook, onDeleteP
       setSelectedDate(null);
     } else {
       setSelectedDate(date);
+      setShowRightPanel(true);
     }
   };
 
@@ -149,6 +151,14 @@ export default function CalendarPage({ plans, onCreatePlanForNotebook, onDeleteP
               {monthNames[month]} {year}
             </button>
             <button onClick={() => setViewDate(new Date(year, month + 1, 1))} className="btn-ghost-outline btn-sm"><FiChevronRight /></button>
+            <button 
+              onClick={() => setShowRightPanel(!showRightPanel)} 
+              className="btn-ghost-outline btn-sm"
+              style={{ marginLeft: '12px', background: showRightPanel ? 'var(--bg-tertiary)' : 'transparent' }}
+              title="Toggle sidebar"
+            >
+              <FiSidebar />
+            </button>
           </div>
         </div>
 
@@ -237,11 +247,12 @@ export default function CalendarPage({ plans, onCreatePlanForNotebook, onDeleteP
       </div>
 
       {/* Right: Selected Day Details */}
-      <div style={{
-        width: '360px', borderLeft: '1px solid var(--border-color)',
-        background: 'var(--bg-secondary)', display: 'flex', flexDirection: 'column',
-        overflow: 'hidden', flexShrink: 0
-      }}>
+      {showRightPanel && (
+        <div style={{
+          width: '360px', borderLeft: '1px solid var(--border-color)',
+          background: 'var(--bg-secondary)', display: 'flex', flexDirection: 'column',
+          overflow: 'hidden', flexShrink: 0
+        }}>
         {selectedDate ? (
           <>
             <div style={{
@@ -446,6 +457,7 @@ export default function CalendarPage({ plans, onCreatePlanForNotebook, onDeleteP
           </div>
         )}
       </div>
+      )}
     </div>
   );
 }
