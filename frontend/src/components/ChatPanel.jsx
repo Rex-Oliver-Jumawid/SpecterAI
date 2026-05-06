@@ -59,12 +59,12 @@ export default function ChatPanel({
   };
 
   const quickPrompts = [
+    { icon: '📚', label: 'Write with references', msg: 'Write a paragraph about my topic using my saved references as context. Include proper citations from the sources.' },
     { icon: '✍️', label: 'Improve my writing', msg: 'Read my current document and improve the writing style, grammar, and clarity. Return the improved version.' },
     { icon: '📝', label: 'Continue writing', msg: 'Read my current document and continue writing where I left off, maintaining the same tone and style.' },
-    { icon: '📊', label: 'Summarize document', msg: 'Summarize my current document.' },
+    { icon: '🤖', label: 'Check if AI-written', msg: 'Analyze my current document and check which parts might appear AI-generated. Give me a confidence score and suggestions to make it more authentic.' },
     { icon: '📋', label: 'Create outline', msg: 'Read my current document and suggest a structured outline for the rest of the paper.' },
-    { icon: '🔧', label: 'Fix grammar', msg: 'Fix all grammar and spelling errors in my document. Return the corrected version.' },
-    { icon: '📖', label: 'Add introduction', msg: 'Write a strong introduction paragraph for my paper based on the current content.' },
+    { icon: '📖', label: 'Add introduction', msg: 'Write a strong introduction paragraph for my paper based on the current content and my saved references.' },
   ];
 
   const formatContent = (text) => {
