@@ -118,7 +118,7 @@ export default function CalendarPage({ plans, onCreatePlanForNotebook, onDeleteP
   const totalDone = plans.filter(p => p.status === 'done').length;
 
   return (
-    <div style={{ display: 'flex', height: '100%', overflow: 'hidden' }}>
+    <div className="calendar-layout">
       {/* Calendar Grid */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         {/* Header */}
@@ -248,11 +248,7 @@ export default function CalendarPage({ plans, onCreatePlanForNotebook, onDeleteP
 
       {/* Right: Selected Day Details */}
       {showRightPanel && (
-        <div style={{
-          width: '360px', borderLeft: '1px solid var(--border-color)',
-          background: 'var(--bg-secondary)', display: 'flex', flexDirection: 'column',
-          overflow: 'hidden', flexShrink: 0
-        }}>
+        <div className="calendar-sidebar">
         {selectedDate ? (
           <>
             <div style={{
