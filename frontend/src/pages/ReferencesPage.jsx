@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { FiSearch, FiTrash2, FiChevronDown, FiChevronRight, FiCopy, FiPlus, FiStar, FiBookOpen } from 'react-icons/fi';
+import { FiSearch, FiTrash2, FiChevronDown, FiChevronRight, FiCopy, FiPlus, FiStar, FiBookOpen, FiCheck, FiExternalLink } from 'react-icons/fi';
 import { references as refsApi } from '../api';
 
-export default function ReferencesPage({ references, onAddReference, onDeleteReference, notebookId }) {
+export default function ReferencesPage({ references, onAddReference, onAddReferenceToNotebook, onDeleteReference, notebookId, allNotebooks = [] }) {
   const [url, setUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [expandedId, setExpandedId] = useState(null);
@@ -14,7 +14,9 @@ export default function ReferencesPage({ references, onAddReference, onDeleteRef
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching] = useState(false);
   const [addedIds, setAddedIds] = useState(new Set());
-  const [activeTab, setActiveTab] = useState('library'); // 'library' | 'search'
+  const [activeTab, setActiveTab] = useState('library');
+  const [selectedNotebookId, setSelectedNotebookId] = useState(notebookId || '');
+  const [searchError, setSearchError] = useState('');
 
   const handleAdd = async () => {
     if (!url.trim()) return;
@@ -27,20 +29,33 @@ export default function ReferencesPage({ references, onAddReference, onDeleteRef
   const handleTopicSearch = async () => {
     if (!topicQuery.trim()) return;
     setSearching(true);
+    setSearchError('');
     try {
       const results = await refsApi.search(topicQuery.trim());
       setSearchResults(results);
       setAddedIds(new Set());
-    } catch (e) { console.error(e); }
+    } catch (e) {
+      console.error(e);
+      setSearchError('Search failed. Please try again.');
+    }
     finally { setSearching(false); }
   };
 
   const handleSaveSearchResult = async (ref) => {
+    const targetNbId = selectedNotebookId;
+    if (!targetNbId) return alert('Please select a notebook to save to.');
     try {
-      await onAddReference(null, {
-        title: ref.title, authors: ref.authors, year: ref.year,
-        journal: ref.journal, doi: ref.doi, abstract: ref.abstract, url: ref.url
-      });
+      if (onAddReferenceToNotebook) {
+        await onAddReferenceToNotebook(targetNbId, {
+          title: ref.title, authors: ref.authors, year: ref.year,
+          journal: ref.journal, doi: ref.doi, abstract: ref.abstract, url: ref.url
+        });
+      } else {
+        await onAddReference(null, {
+          title: ref.title, authors: ref.authors, year: ref.year,
+          journal: ref.journal, doi: ref.doi, abstract: ref.abstract, url: ref.url
+        });
+      }
       setAddedIds(prev => new Set([...prev, ref.id]));
     } catch (e) { console.error(e); }
   };
@@ -67,19 +82,16 @@ export default function ReferencesPage({ references, onAddReference, onDeleteRef
   };
 
   const getScoreColor = (score) => {
-    if (score >= 80) return { bg: 'oklch(0.66 0.17 155 / 0.15)', color: 'oklch(0.70 0.16 155)', border: 'oklch(0.66 0.17 155 / 0.3)' };
-    if (score >= 60) return { bg: 'oklch(0.72 0.18 55 / 0.15)', color: 'oklch(0.78 0.16 55)', border: 'oklch(0.72 0.18 55 / 0.3)' };
-    if (score >= 40) return { bg: 'oklch(0.70 0.19 20 / 0.12)', color: 'oklch(0.75 0.17 20)', border: 'oklch(0.70 0.19 20 / 0.25)' };
+    if (score >= 80) return { bg: 'rgba(34, 197, 94, 0.12)', color: '#4ade80', border: 'rgba(34, 197, 94, 0.25)' };
+    if (score >= 60) return { bg: 'rgba(251, 191, 36, 0.12)', color: '#fbbf24', border: 'rgba(251, 191, 36, 0.25)' };
+    if (score >= 40) return { bg: 'rgba(251, 146, 60, 0.1)', color: '#fb923c', border: 'rgba(251, 146, 60, 0.2)' };
     return { bg: 'var(--bg-tertiary)', color: 'var(--text-muted)', border: 'var(--border-color)' };
   };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
       {/* Header */}
-      <div style={{
-        padding: '24px 32px 0',
-        background: 'var(--bg-secondary)',
-      }}>
+      <div style={{ padding: '24px 32px 0', background: 'var(--bg-secondary)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
           <div>
             <h1 style={{
@@ -88,7 +100,7 @@ export default function ReferencesPage({ references, onAddReference, onDeleteRef
             }}>
               <div style={{
                 width: '36px', height: '36px', borderRadius: '10px',
-                background: 'linear-gradient(135deg, var(--color-ghost-500), var(--color-specter-500))',
+                background: 'linear-gradient(135deg, #7c3aed, #4f46e5)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center'
               }}>
                 <FiSearch size={18} color="white" />
@@ -108,13 +120,11 @@ export default function ReferencesPage({ references, onAddReference, onDeleteRef
             <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{
               display: 'flex', alignItems: 'center', gap: '6px',
               padding: '10px 20px', border: 'none', cursor: 'pointer',
-              fontSize: '0.78rem', fontWeight: 600,
-              fontFamily: 'var(--font-sans)',
+              fontSize: '0.78rem', fontWeight: 600, fontFamily: 'var(--font-sans)',
               background: 'transparent',
-              color: activeTab === tab.id ? 'var(--color-specter-500)' : 'var(--text-muted)',
-              borderBottom: activeTab === tab.id ? '2px solid var(--color-specter-500)' : '2px solid transparent',
-              transition: 'all 0.2s',
-              marginBottom: '-1px'
+              color: activeTab === tab.id ? '#7c3aed' : 'var(--text-muted)',
+              borderBottom: activeTab === tab.id ? '2px solid #7c3aed' : '2px solid transparent',
+              transition: 'all 0.2s', marginBottom: '-1px'
             }}>
               {tab.icon} {tab.label}
             </button>
@@ -126,7 +136,6 @@ export default function ReferencesPage({ references, onAddReference, onDeleteRef
       {activeTab === 'library' && (
         <>
           <div style={{ padding: '16px 32px', borderBottom: '1px solid var(--border-color)', background: 'var(--bg-secondary)' }}>
-            {/* Add by URL */}
             <div style={{ display: 'flex', gap: '8px', marginBottom: references.length > 0 ? '10px' : '0' }}>
               <input type="text" value={url} onChange={e => setUrl(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleAdd()}
@@ -136,7 +145,6 @@ export default function ReferencesPage({ references, onAddReference, onDeleteRef
                 {loading ? 'Adding...' : '+ Add'}
               </button>
             </div>
-            {/* Filter */}
             {references.length > 0 && (
               <div style={{ position: 'relative' }}>
                 <FiSearch size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
@@ -150,7 +158,7 @@ export default function ReferencesPage({ references, onAddReference, onDeleteRef
           <div style={{ flex: 1, overflow: 'auto', padding: '16px 24px' }}>
             {filtered.length === 0 && references.length === 0 ? (
               <div className="empty-state" style={{ paddingTop: '60px' }}>
-                <div className="empty-state-icon" style={{ fontSize: '3rem' }}>📚</div>
+                <FiBookOpen size={40} style={{ color: 'var(--text-muted)', opacity: 0.4, marginBottom: '8px' }} />
                 <div className="empty-state-title" style={{ fontSize: '1rem' }}>No references yet</div>
                 <div className="empty-state-text" style={{ fontSize: '0.85rem', maxWidth: '300px' }}>
                   Paste a URL above or switch to <strong>Discover</strong> to search for references by topic.
@@ -158,7 +166,7 @@ export default function ReferencesPage({ references, onAddReference, onDeleteRef
               </div>
             ) : filtered.length === 0 ? (
               <div className="empty-state" style={{ paddingTop: '40px' }}>
-                <div className="empty-state-icon">🔍</div>
+                <FiSearch size={28} style={{ color: 'var(--text-muted)', opacity: 0.4 }} />
                 <div className="empty-state-title">No matches</div>
                 <div className="empty-state-text">Try a different search term.</div>
               </div>
@@ -189,7 +197,17 @@ export default function ReferencesPage({ references, onAddReference, onDeleteRef
                       {isOpen && (
                         <div className="animate-slide-down" style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--border-color)' }}>
                           {ref.abstract && <p style={{ fontSize: '0.78rem', color: 'var(--text-tertiary)', lineHeight: 1.6, marginBottom: '10px' }}>{ref.abstract}</p>}
-                          {ref.doi && <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>DOI: {ref.doi}</p>}
+                          {ref.doi && (
+                            <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+                              DOI: <a href={`https://doi.org/${ref.doi}`} target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6', textDecoration: 'none' }}>{ref.doi}</a>
+                            </p>
+                          )}
+                          {(ref.url || ref.doi) && (
+                            <a href={ref.url || `https://doi.org/${ref.doi}`} target="_blank" rel="noopener noreferrer"
+                              style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.72rem', color: '#3b82f6', textDecoration: 'none', marginTop: '4px' }}>
+                              <FiExternalLink size={11} /> Open Paper
+                            </a>
+                          )}
                         </div>
                       )}
                       <div style={{ display: 'flex', gap: '6px', marginTop: isOpen ? '12px' : '10px' }}>
@@ -197,7 +215,7 @@ export default function ReferencesPage({ references, onAddReference, onDeleteRef
                           <FiCopy size={11} /> {copiedId === ref.id ? 'Copied!' : 'Copy APA'}
                         </button>
                         <button onClick={() => onDeleteReference(ref.id)} className="btn-ghost-outline btn-xs" style={{
-                          color: 'var(--color-danger-400)', borderColor: 'oklch(0.62 0.21 20 / 0.15)',
+                          color: '#f87171', borderColor: 'rgba(248, 113, 113, 0.2)',
                           display: 'flex', alignItems: 'center', gap: '4px'
                         }}>
                           <FiTrash2 size={11} /> Remove
@@ -212,49 +230,72 @@ export default function ReferencesPage({ references, onAddReference, onDeleteRef
         </>
       )}
 
-      {/* DISCOVER TAB — topic search with scoring */}
+      {/* DISCOVER TAB — real OpenAlex search */}
       {activeTab === 'search' && (
         <>
           <div style={{ padding: '16px 32px', borderBottom: '1px solid var(--border-color)', background: 'var(--bg-secondary)' }}>
-            <div style={{ display: 'flex', gap: '8px' }}>
+            {/* Search bar */}
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
               <div style={{ position: 'relative', flex: 1 }}>
                 <FiSearch size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
                 <input type="text" value={topicQuery} onChange={e => setTopicQuery(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && handleTopicSearch()}
-                  placeholder="Search a topic (e.g., machine learning in education)..."
+                  placeholder="Search real academic papers (e.g., machine learning in education)..."
                   className="input-specter" style={{ paddingLeft: '36px' }} />
               </div>
               <button onClick={handleTopicSearch} disabled={searching || !topicQuery.trim()} className="btn-specter" style={{ flexShrink: 0 }}>
                 {searching ? 'Searching...' : 'Search'}
               </button>
             </div>
+            {/* Notebook selector */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>Save to:</span>
+              <select
+                value={selectedNotebookId}
+                onChange={e => setSelectedNotebookId(e.target.value)}
+                className="input-specter"
+                style={{ flex: 1, maxWidth: '300px', padding: '6px 10px', fontSize: '0.75rem' }}
+              >
+                <option value="">— Select a notebook —</option>
+                {allNotebooks.map(nb => (
+                  <option key={nb.id} value={nb.id}>{nb.title || 'Untitled'}</option>
+                ))}
+              </select>
+            </div>
           </div>
 
           <div style={{ flex: 1, overflow: 'auto', padding: '16px 24px' }}>
+            {searchError && (
+              <div style={{ padding: '12px 16px', borderRadius: '8px', background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.2)', color: '#f87171', fontSize: '0.78rem', marginBottom: '12px' }}>
+                {searchError}
+              </div>
+            )}
             {searchResults.length === 0 ? (
               <div className="empty-state" style={{ paddingTop: '60px' }}>
-                <div className="empty-state-icon" style={{ fontSize: '3rem' }}>🔍</div>
-                <div className="empty-state-title" style={{ fontSize: '1rem' }}>Search for references</div>
+                <FiSearch size={40} style={{ color: 'var(--text-muted)', opacity: 0.4, marginBottom: '8px' }} />
+                <div className="empty-state-title" style={{ fontSize: '1rem' }}>
+                  {searching ? 'Searching OpenAlex...' : 'Search for real papers'}
+                </div>
                 <div className="empty-state-text" style={{ fontSize: '0.85rem', maxWidth: '340px' }}>
-                  Type a research topic above to discover academic papers, sorted by relevance score.
+                  Powered by OpenAlex — search millions of real academic papers. Results include actual authors, journals, DOIs, and citation counts.
                 </div>
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '4px' }}>
-                  {searchResults.length} results for "{topicQuery}" · sorted by relevance
+                  {searchResults.length} results for "{topicQuery}" · sorted by relevance · powered by OpenAlex
                 </div>
-                {searchResults.map((ref, idx) => {
+                {searchResults.map((ref) => {
                   const scoreStyle = getScoreColor(ref.relevance_score);
                   const isSaved = addedIds.has(ref.id);
+                  const targetNb = allNotebooks.find(n => n.id === selectedNotebookId);
                   return (
                     <div key={ref.id} className="glass-card" style={{ padding: '18px', display: 'flex', gap: '14px', alignItems: 'start' }}>
                       {/* Score badge */}
                       <div style={{
                         width: '48px', height: '48px', borderRadius: '12px', flexShrink: 0,
                         background: scoreStyle.bg, border: `1px solid ${scoreStyle.border}`,
-                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                        gap: '1px'
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1px'
                       }}>
                         <span style={{ fontSize: '1rem', fontWeight: 800, color: scoreStyle.color, lineHeight: 1 }}>
                           {ref.relevance_score}
@@ -267,38 +308,62 @@ export default function ReferencesPage({ references, onAddReference, onDeleteRef
                       {/* Content */}
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <h3 style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--text-primary)', margin: 0, lineHeight: 1.4 }}>
-                          {ref.title}
+                          {(ref.url || ref.doi) ? (
+                            <a href={ref.url || `https://doi.org/${ref.doi}`} target="_blank" rel="noopener noreferrer"
+                              style={{ color: 'inherit', textDecoration: 'none' }}
+                              onMouseEnter={e => e.currentTarget.style.color = '#3b82f6'}
+                              onMouseLeave={e => e.currentTarget.style.color = 'inherit'}>
+                              {ref.title} <FiExternalLink size={11} style={{ display: 'inline', opacity: 0.5 }} />
+                            </a>
+                          ) : ref.title}
                         </h3>
                         <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', margin: '4px 0 0' }}>
-                          {ref.authors} · {ref.year} · <em>{ref.journal}</em>
+                          {ref.authors} · {ref.year}
+                          {ref.journal && <> · <em>{ref.journal}</em></>}
                         </p>
-                        <p style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', margin: '8px 0 0', lineHeight: 1.6 }} className="line-clamp-2">
-                          {ref.abstract}
-                        </p>
-                        <div style={{ display: 'flex', gap: '6px', marginTop: '10px', alignItems: 'center' }}>
+                        {ref.abstract && (
+                          <p style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', margin: '8px 0 0', lineHeight: 1.6, maxHeight: '3.2em', overflow: 'hidden' }}>
+                            {ref.abstract}
+                          </p>
+                        )}
+                        <div style={{ display: 'flex', gap: '6px', marginTop: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
                           <span className={`badge ${ref.confidence === 'verified' ? 'badge-verified' : ref.confidence === 'partial' ? 'badge-partial' : 'badge-manual'}`}>
                             {ref.confidence === 'verified' ? '✓ Verified' : ref.confidence === 'partial' ? '⚠ Partial' : '? Manual'}
                           </span>
-                          {ref.doi && (
-                            <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
-                              {ref.doi}
+                          {ref.cited_by_count > 0 && (
+                            <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)' }}>
+                              {ref.cited_by_count.toLocaleString()} citations
                             </span>
+                          )}
+                          {ref.doi && (
+                            <a href={`https://doi.org/${ref.doi}`} target="_blank" rel="noopener noreferrer"
+                              style={{ fontSize: '0.6rem', color: '#3b82f6', fontFamily: 'var(--font-mono)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '2px' }}>
+                              <FiExternalLink size={9} /> {ref.doi}
+                            </a>
                           )}
                         </div>
                       </div>
 
                       {/* Save button */}
-                      <button
-                        onClick={() => handleSaveSearchResult(ref)}
-                        disabled={isSaved}
-                        className={isSaved ? 'btn-ghost-outline btn-sm' : 'btn-specter btn-sm'}
-                        style={{
-                          flexShrink: 0, display: 'flex', alignItems: 'center', gap: '4px',
-                          opacity: isSaved ? 0.6 : 1
-                        }}
-                      >
-                        {isSaved ? <><FiStar size={12} /> Saved</> : <><FiPlus size={12} /> Save</>}
-                      </button>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flexShrink: 0 }}>
+                        <button
+                          onClick={() => handleSaveSearchResult(ref)}
+                          disabled={isSaved || !selectedNotebookId}
+                          className={isSaved ? 'btn-ghost-outline btn-sm' : 'btn-specter btn-sm'}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: '4px',
+                            opacity: isSaved ? 0.6 : !selectedNotebookId ? 0.4 : 1
+                          }}
+                          title={!selectedNotebookId ? 'Select a notebook first' : ''}
+                        >
+                          {isSaved ? <><FiCheck size={12} /> Saved</> : <><FiPlus size={12} /> Save</>}
+                        </button>
+                        {isSaved && targetNb && (
+                          <span style={{ fontSize: '0.58rem', color: '#4ade80', textAlign: 'center' }}>
+                            → {targetNb.title}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   );
                 })}

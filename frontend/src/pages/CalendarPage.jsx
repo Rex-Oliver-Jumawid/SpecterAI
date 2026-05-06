@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { FiChevronLeft, FiChevronRight, FiPlus, FiPlay, FiTrash2, FiClock, FiZap, FiSearch, FiChevronDown, FiChevronRight as FiRight } from 'react-icons/fi';
+import { FiChevronLeft, FiChevronRight, FiPlus, FiPlay, FiTrash2, FiClock, FiZap, FiSearch, FiChevronDown, FiChevronRight as FiRight, FiBookOpen, FiCalendar } from 'react-icons/fi';
 
-export default function CalendarPage({ plans, onCreatePlan, onDeletePlan, onTriggerAi }) {
+export default function CalendarPage({ plans, onCreatePlanForNotebook, onDeletePlan, onTriggerAi, allNotebooks = [] }) {
   const [viewDate, setViewDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(null);
   const [showForm, setShowForm] = useState(false);
@@ -14,6 +14,7 @@ export default function CalendarPage({ plans, onCreatePlan, onDeletePlan, onTrig
   const [preFetchRefs, setPreFetchRefs] = useState(false);
   const [instructions, setInstructions] = useState('');
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [selectedNotebookId, setSelectedNotebookId] = useState('');
 
   const year = viewDate.getFullYear();
   const month = viewDate.getMonth();
@@ -82,11 +83,11 @@ export default function CalendarPage({ plans, onCreatePlan, onDeletePlan, onTrig
     : [];
 
   const handleCreate = () => {
-    if (!title.trim() || !selectedDate) return;
+    if (!title.trim() || !selectedDate || !selectedNotebookId) return;
     const y = selectedDate.getFullYear();
     const m = String(selectedDate.getMonth() + 1).padStart(2, '0');
     const d = String(selectedDate.getDate()).padStart(2, '0');
-    onCreatePlan({
+    onCreatePlanForNotebook(selectedNotebookId, {
       title: title.trim(),
       outline: outline.trim(),
       output_type: preFetchRefs ? 'references_only' : outputType,
@@ -106,11 +107,10 @@ export default function CalendarPage({ plans, onCreatePlan, onDeletePlan, onTrig
     planned: { cls: 'status-planned', icon: '📋', label: 'Planned' },
     preparing: { cls: 'status-preparing', icon: '🔄', label: 'Preparing' },
     ready: { cls: 'status-ready', icon: '✅', label: 'Ready' },
-    review: { cls: 'status-review', icon: '👻', label: 'Review' },
+    review: { cls: 'status-review', icon: '✦', label: 'Review' },
     done: { cls: 'status-done', icon: '✓', label: 'Done' },
   }[s] || { cls: 'status-planned', icon: '📋', label: 'Planned' });
 
-  // Stats
   const totalPlanned = plans.filter(p => p.status === 'planned').length;
   const totalReview = plans.filter(p => p.status === 'review').length;
   const totalDone = plans.filter(p => p.status === 'done').length;
@@ -126,10 +126,20 @@ export default function CalendarPage({ plans, onCreatePlan, onDeletePlan, onTrig
           display: 'flex', alignItems: 'center', justifyContent: 'space-between'
         }}>
           <div>
-            <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0, fontFamily: 'var(--font-serif)' }}>
-              📅 Calendar
+            <h1 style={{
+              fontSize: '1.4rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0,
+              fontFamily: 'var(--font-serif)', display: 'flex', alignItems: 'center', gap: '10px'
+            }}>
+              <div style={{
+                width: '36px', height: '36px', borderRadius: '10px',
+                background: 'linear-gradient(135deg, #7c3aed, #4f46e5)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center'
+              }}>
+                <FiCalendar size={18} color="white" />
+              </div>
+              Calendar
             </h1>
-            <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '4px 0 0' }}>
+            <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '4px 0 0', paddingLeft: '46px' }}>
               {totalPlanned} planned · {totalReview} for review · {totalDone} done
             </p>
           </div>
@@ -173,7 +183,7 @@ export default function CalendarPage({ plans, onCreatePlan, onDeletePlan, onTrig
                 borderRight: '1px solid var(--border-color)',
                 borderBottom: '1px solid var(--border-color)',
                 cursor: d.other ? 'default' : 'pointer',
-                background: sel ? 'var(--accent-bg)' : td ? 'oklch(0.55 0.22 275 / 0.03)' : 'transparent',
+                background: sel ? 'var(--accent-bg)' : td ? 'rgba(124,58,237,0.03)' : 'transparent',
                 opacity: d.other ? 0.3 : 1,
                 transition: 'background 0.15s ease',
                 overflow: 'hidden',
@@ -181,19 +191,17 @@ export default function CalendarPage({ plans, onCreatePlan, onDeletePlan, onTrig
                 flexDirection: 'column'
               }}
               onMouseEnter={(e) => { if (!d.other && !sel) e.currentTarget.style.background = 'var(--bg-hover)'; }}
-              onMouseLeave={(e) => { if (!d.other && !sel) e.currentTarget.style.background = td ? 'oklch(0.55 0.22 275 / 0.03)' : 'transparent'; }}
+              onMouseLeave={(e) => { if (!d.other && !sel) e.currentTarget.style.background = td ? 'rgba(124,58,237,0.03)' : 'transparent'; }}
               >
                 <div style={{
                   fontSize: '0.85rem',
                   fontWeight: td ? 800 : 500,
-                  color: td ? 'var(--color-specter-500)' : sel ? 'var(--color-specter-600)' : 'var(--text-secondary)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px'
+                  color: td ? '#7c3aed' : sel ? '#7c3aed' : 'var(--text-secondary)',
+                  display: 'flex', alignItems: 'center', gap: '4px'
                 }}>
                   {td && <span style={{
                     width: '22px', height: '22px', borderRadius: '50%',
-                    background: 'var(--color-specter-500)', color: 'white',
+                    background: '#7c3aed', color: 'white',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     fontSize: '0.72rem', fontWeight: 700
                   }}>{d.day}</span>}
@@ -206,12 +214,12 @@ export default function CalendarPage({ plans, onCreatePlan, onDeletePlan, onTrig
                       <div key={j} style={{
                         fontSize: '0.6rem', padding: '1px 4px', borderRadius: '3px',
                         whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                        background: t.status === 'review' ? 'oklch(0.72 0.18 55 / 0.12)' :
-                                    t.status === 'done' ? 'oklch(0.66 0.17 155 / 0.1)' :
-                                    'var(--accent-bg)',
-                        color: t.status === 'review' ? 'var(--color-ember-500)' :
-                               t.status === 'done' ? 'var(--color-phantom-500)' :
-                               'var(--color-specter-500)',
+                        background: t.status === 'review' ? 'rgba(251,191,36,0.12)' :
+                                    t.status === 'done' ? 'rgba(34,197,94,0.1)' :
+                                    'rgba(124,58,237,0.08)',
+                        color: t.status === 'review' ? '#fbbf24' :
+                               t.status === 'done' ? '#4ade80' :
+                               '#7c3aed',
                         fontWeight: 600
                       }}>
                         {st.icon} {t.title}
@@ -230,7 +238,7 @@ export default function CalendarPage({ plans, onCreatePlan, onDeletePlan, onTrig
 
       {/* Right: Selected Day Details */}
       <div style={{
-        width: '340px', borderLeft: '1px solid var(--border-color)',
+        width: '360px', borderLeft: '1px solid var(--border-color)',
         background: 'var(--bg-secondary)', display: 'flex', flexDirection: 'column',
         overflow: 'hidden', flexShrink: 0
       }}>
@@ -256,6 +264,24 @@ export default function CalendarPage({ plans, onCreatePlan, onDeletePlan, onTrig
             {showForm && (
               <div style={{ padding: '16px', borderBottom: '1px solid var(--border-color)', background: 'var(--bg-tertiary)' }} className="animate-slide-down">
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {/* NOTEBOOK SELECTOR — tasks are always within a notebook */}
+                  <div>
+                    <label style={{ fontSize: '0.68rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <FiBookOpen size={11} /> Notebook
+                    </label>
+                    <select
+                      value={selectedNotebookId}
+                      onChange={e => setSelectedNotebookId(e.target.value)}
+                      className="input-specter"
+                      style={{ width: '100%', fontSize: '0.78rem', padding: '8px 10px' }}
+                    >
+                      <option value="">— Select a notebook —</option>
+                      {allNotebooks.map(nb => (
+                        <option key={nb.id} value={nb.id}>{nb.title || 'Untitled'}</option>
+                      ))}
+                    </select>
+                  </div>
+
                   <input type="text" value={title} onChange={e => setTitle(e.target.value)}
                     placeholder="Task title..." className="input-specter" style={{ fontSize: '0.78rem' }} />
                   <textarea value={outline} onChange={e => setOutline(e.target.value)}
@@ -286,7 +312,7 @@ export default function CalendarPage({ plans, onCreatePlan, onDeletePlan, onTrig
                   <button onClick={() => setShowAdvanced(!showAdvanced)} style={{
                     display: 'flex', alignItems: 'center', gap: '4px',
                     background: 'none', border: 'none', cursor: 'pointer',
-                    fontSize: '0.68rem', color: 'var(--color-specter-500)',
+                    fontSize: '0.68rem', color: '#7c3aed',
                     fontFamily: 'var(--font-sans)', fontWeight: 600, padding: '2px 0'
                   }}>
                     {showAdvanced ? <FiChevronDown size={10} /> : <FiRight size={10} />}
@@ -306,10 +332,10 @@ export default function CalendarPage({ plans, onCreatePlan, onDeletePlan, onTrig
                       }}>
                         <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
                           <input type="checkbox" checked={autoStart} onChange={e => setAutoStart(e.target.checked)}
-                            style={{ accentColor: 'var(--color-specter-500)' }} />
+                            style={{ accentColor: '#7c3aed' }} />
                           <div>
                             <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                              <FiZap size={10} style={{ color: 'var(--color-specter-500)' }} /> Auto-start at deadline
+                              <FiZap size={10} style={{ color: '#7c3aed' }} /> Auto-start at deadline
                             </div>
                             <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)' }}>AI starts if you're unavailable</div>
                           </div>
@@ -317,10 +343,10 @@ export default function CalendarPage({ plans, onCreatePlan, onDeletePlan, onTrig
 
                         <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
                           <input type="checkbox" checked={preFetchRefs} onChange={e => setPreFetchRefs(e.target.checked)}
-                            style={{ accentColor: 'var(--color-ghost-500)' }} />
+                            style={{ accentColor: '#7c3aed' }} />
                           <div>
                             <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                              <FiSearch size={10} style={{ color: 'var(--color-ghost-500)' }} /> Pre-fetch references
+                              <FiSearch size={10} style={{ color: '#7c3aed' }} /> Pre-fetch references
                             </div>
                             <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)' }}>Gather references before you start</div>
                           </div>
@@ -330,8 +356,9 @@ export default function CalendarPage({ plans, onCreatePlan, onDeletePlan, onTrig
                   )}
 
                   <div style={{ display: 'flex', gap: '8px' }}>
-                    <button onClick={handleCreate} className="btn-specter btn-sm" style={{ flex: 1 }} disabled={!title.trim()}>
-                      {autoStart ? '⚡ Create & Auto-start' : 'Create Task'}
+                    <button onClick={handleCreate} className="btn-specter btn-sm" style={{ flex: 1 }}
+                      disabled={!title.trim() || !selectedNotebookId}>
+                      {!selectedNotebookId ? 'Select Notebook' : autoStart ? '⚡ Create & Auto-start' : 'Create Task'}
                     </button>
                     <button onClick={() => { setShowForm(false); setShowAdvanced(false); }} className="btn-ghost-outline btn-sm">Cancel</button>
                   </div>
@@ -342,21 +369,30 @@ export default function CalendarPage({ plans, onCreatePlan, onDeletePlan, onTrig
             <div style={{ flex: 1, overflow: 'auto', padding: '12px' }}>
               {selectedDayTasks.length === 0 ? (
                 <div className="empty-state" style={{ paddingTop: '40px' }}>
-                  <div className="empty-state-icon">📋</div>
+                  <FiCalendar size={28} style={{ color: 'var(--text-muted)', opacity: 0.4 }} />
                   <div className="empty-state-title">No tasks on this day</div>
-                  <div className="empty-state-text">Click "+ Add Task" to schedule a task here.</div>
+                  <div className="empty-state-text">Click "+ Add Task" to schedule a task for a specific notebook.</div>
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {selectedDayTasks.map(task => {
                     const st = getStatusConfig(task.status);
                     const overdue = task.scheduled_date && new Date(task.scheduled_date) < new Date() && task.status === 'planned';
+                    const taskNotebook = allNotebooks.find(nb => nb.id === task.notebook_id);
                     return (
                       <div key={task.id} className="plan-card group" style={{ padding: '14px' }}>
                         <div style={{ display: 'flex', alignItems: 'start', gap: '8px' }}>
                           <span style={{ fontSize: '0.9rem' }}>{st.icon}</span>
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)' }}>{task.title}</div>
+                            {taskNotebook && (
+                              <div style={{
+                                fontSize: '0.62rem', color: '#7c3aed', marginTop: '2px',
+                                display: 'flex', alignItems: 'center', gap: '3px'
+                              }}>
+                                <FiBookOpen size={9} /> {taskNotebook.title}
+                              </div>
+                            )}
                             {task.outline && (
                               <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '4px' }} className="line-clamp-2">{task.outline}</div>
                             )}
@@ -366,36 +402,26 @@ export default function CalendarPage({ plans, onCreatePlan, onDeletePlan, onTrig
                               {task.auto_start === 1 && (
                                 <span style={{
                                   fontSize: '0.58rem', padding: '1px 5px', borderRadius: '4px',
-                                  background: 'oklch(0.55 0.22 275 / 0.08)', color: 'var(--color-specter-500)',
+                                  background: 'rgba(124,58,237,0.08)', color: '#7c3aed',
                                   display: 'flex', alignItems: 'center', gap: '2px'
                                 }}>
                                   <FiZap size={7} /> Auto
                                 </span>
                               )}
-                              {task.pre_fetch_refs === 1 && (
+                              {overdue && (
                                 <span style={{
                                   fontSize: '0.58rem', padding: '1px 5px', borderRadius: '4px',
-                                  background: 'oklch(0.62 0.14 195 / 0.08)', color: 'var(--color-ghost-500)',
-                                  display: 'flex', alignItems: 'center', gap: '2px'
+                                  background: 'rgba(248,113,113,0.1)', color: '#f87171'
                                 }}>
-                                  <FiSearch size={7} /> Refs
+                                  Overdue
                                 </span>
                               )}
                             </div>
-                            {task.instructions && (
-                              <div style={{
-                                fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '6px',
-                                padding: '4px 8px', borderRadius: '4px', background: 'var(--bg-tertiary)',
-                                borderLeft: '2px solid var(--color-specter-400)'
-                              }} className="line-clamp-2">
-                                📝 {task.instructions}
-                              </div>
-                            )}
                           </div>
                           <div style={{ display: 'flex', gap: '4px' }}>
                             {(task.status === 'planned' || overdue) && (
                               <button onClick={() => onTriggerAi(task.id)} title="Let Specter work"
-                                style={{ color: 'var(--color-specter-500)', padding: '4px', borderRadius: '4px', background: 'none', border: 'none', cursor: 'pointer' }}>
+                                style={{ color: '#7c3aed', padding: '4px', borderRadius: '4px', background: 'none', border: 'none', cursor: 'pointer' }}>
                                 <FiPlay size={14} />
                               </button>
                             )}
@@ -414,9 +440,9 @@ export default function CalendarPage({ plans, onCreatePlan, onDeletePlan, onTrig
           </>
         ) : (
           <div className="empty-state" style={{ height: '100%', justifyContent: 'center' }}>
-            <div className="empty-state-icon">👆</div>
+            <FiCalendar size={36} style={{ color: 'var(--text-muted)', opacity: 0.3, marginBottom: '8px' }} />
             <div className="empty-state-title">Select a day</div>
-            <div className="empty-state-text">Click on a date to view or create tasks.</div>
+            <div className="empty-state-text">Click on a date to view or create tasks for specific notebooks.</div>
           </div>
         )}
       </div>

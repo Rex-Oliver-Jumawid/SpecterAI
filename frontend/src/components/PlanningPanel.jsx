@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FiPlus, FiTrash2, FiClock, FiPlay, FiZap, FiSearch, FiChevronDown, FiChevronRight } from 'react-icons/fi';
+import { FiPlus, FiTrash2, FiClock, FiPlay, FiZap, FiSearch, FiChevronDown, FiChevronRight, FiChevronsLeft } from 'react-icons/fi';
 import Calendar from './Calendar';
 
 export default function PlanningPanel({
@@ -9,7 +9,8 @@ export default function PlanningPanel({
   onTriggerAi,
   onSelectPlan,
   selectedPlanId,
-  notebookId
+  notebookId,
+  onCollapse
 }) {
   const [showForm, setShowForm] = useState(false);
   const [title, setTitle] = useState('');
@@ -65,7 +66,7 @@ export default function PlanningPanel({
       planned: { class: 'status-planned', icon: '📋', label: 'Planned' },
       preparing: { class: 'status-preparing', icon: '🔄', label: 'Preparing' },
       ready: { class: 'status-ready', icon: '✅', label: 'Ready' },
-      review: { class: 'status-review', icon: '👻', label: 'Review' },
+      review: { class: 'status-review', icon: '✦', label: 'Review' },
       done: { class: 'status-done', icon: '✓', label: 'Done' },
     };
     return configs[status] || configs.planned;
@@ -113,19 +114,19 @@ export default function PlanningPanel({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       {/* Header */}
-      <div style={{
-        padding: '10px 12px 8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between'
-      }}>
+      <div className="panel-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {onCollapse && (
+            <button onClick={onCollapse} className="panel-collapse-btn" title="Collapse panel">
+              <FiChevronsLeft size={14} />
+            </button>
+          )}
           <div className="section-icon" style={{ background: 'var(--accent-bg)', color: 'var(--color-specter-500)' }}>
             📅
           </div>
           <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-primary)' }}>Planning</span>
           {plans.length > 0 && (
-            <span style={{
-              fontSize: '0.6rem', padding: '1px 6px', borderRadius: '999px', fontWeight: 600,
-              background: 'var(--accent-bg)', color: 'var(--color-specter-500)'
-            }}>{plans.length}</span>
+            <span className="badge" style={{ fontSize: '0.6rem' }}>{plans.length}</span>
           )}
         </div>
         <button onClick={() => setShowForm(!showForm)} className="btn-specter btn-xs" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -395,7 +396,7 @@ export default function PlanningPanel({
         background: 'var(--bg-tertiary)'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: '0.85rem' }} className="animate-haunt">👻</span>
+          <span style={{ fontSize: '0.85rem' }} className="animate-haunt">✦</span>
           <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
             {plans.filter(p => p.status === 'review').length > 0
               ? `${plans.filter(p => p.status === 'review').length} task(s) ready for review`

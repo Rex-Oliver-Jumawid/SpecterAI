@@ -1,0 +1,55 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "api/**/*.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/references/search",
+      "dest": "/api/references/search.js"
+    },
+    {
+      "src": "/api/references/([^/]+)",
+      "dest": "/api/references/[id].js?id=$1"
+    },
+    {
+      "src": "/api/notebooks/([^/]+)/references",
+      "dest": "/api/notebooks/[id]/references.js?id=$1"
+    },
+    {
+      "src": "/api/notebooks/([^/]+)/plans",
+      "dest": "/api/notebooks/[id]/plans.js?id=$1"
+    },
+    {
+      "src": "/api/notebooks/([^/]+)/chat",
+      "dest": "/api/notebooks/[id]/chat.js?id=$1"
+    },
+    {
+      "src": "/api/plans/([^/]+)/trigger",
+      "dest": "/api/plans/[id]/trigger.js?id=$1"
+    },
+    {
+      "src": "/api/plans/([^/]+)/confirm",
+      "dest": "/api/plans/[id]/confirm.js?id=$1"
+    },
+    {
+      "src": "/api/plans/([^/]+)",
+      "dest": "/api/plans/[id]/index.js?id=$1"
+    },
+    {
+      "src": "/api/notebooks/([^/]+)",
+      "dest": "/api/notebooks/[id]/index.js?id=$1"
+    },
+    {
+      "src": "/api/notebooks",
+      "dest": "/api/notebooks/index.js"
+    },
+    {
+      "src": "/api/health",
+      "dest": "/api/health.js"
+    }
+  ]
+}

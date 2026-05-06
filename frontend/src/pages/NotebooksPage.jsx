@@ -17,7 +17,7 @@ export default function NotebooksPage({ allNotebooks, onCreateNotebook, onDelete
 
   const handleOpen = (nb) => {
     onSelectNotebook(nb.id);
-    navigate(`/app?notebookId=${nb.id}`);
+    navigate(`/notebooks/${nb.id}`);
   };
 
   const handleDelete = async (e, id) => {
@@ -120,7 +120,7 @@ export default function NotebooksPage({ allNotebooks, onCreateNotebook, onDelete
       <div style={{ flex: 1, overflow: 'auto', padding: '24px 36px' }}>
         {filtered.length === 0 ? (
           <div className="empty-state" style={{ paddingTop: '80px' }}>
-            <div className="empty-state-icon" style={{ fontSize: '3.5rem' }}>📓</div>
+            <FiBookOpen size={48} style={{ color: 'var(--text-muted)', opacity: 0.4, marginBottom: '8px' }} />
             <div className="empty-state-title" style={{ fontSize: '1.1rem' }}>
               {searchQuery ? 'No matching notebooks' : 'No notebooks yet'}
             </div>
@@ -217,7 +217,7 @@ export default function NotebooksPage({ allNotebooks, onCreateNotebook, onDelete
                         fontSize: '0.68rem', color: 'var(--text-muted)',
                         display: 'flex', alignItems: 'center', gap: '4px'
                       }}>
-                        🔗 {nb.ref_count} refs
+                        <FiBookOpen size={10} /> {nb.ref_count} refs
                       </span>
                     )}
                     {nb.plan_count > 0 && (

@@ -23,7 +23,7 @@ export default function ReviewModal({ plan, onConfirm, onReject, onClose }) {
           borderBottom: '1px solid var(--border-color)'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '4px' }}>
-            <span style={{ fontSize: '1.5rem' }}>👻</span>
+            <span style={{ fontSize: '1.5rem' }}>✦</span>
             <h2 style={{ fontSize: '1.15rem', fontWeight: 700, color: 'white', margin: 0 }}>Specter completed your task</h2>
           </div>
           <p style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.8)', margin: 0 }}>

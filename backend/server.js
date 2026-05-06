@@ -60,39 +60,97 @@ function generateAiContent(plan, references) {
   return { content, summary };
 }
 
-// Mock AI chat response
+// AI chat response — IDE-style: reads document, returns edit blocks when applicable
 function generateChatResponse(message, notebookContent, references) {
   const lowerMsg = message.toLowerCase();
+  // Strip HTML tags from editor content
+  const rawContent = (notebookContent || '').replace(/<br\s*\/?>/gi, '\n').replace(/<\/div>/gi, '\n').replace(/<[^>]*>/g, '').trim();
+  const content = rawContent;
+  const wordCount = content.split(/\s+/).filter(w => w.length > 0).length;
+  const sentences = content.split(/[.!?]+/).filter(s => s.trim().length > 5);
+  const paragraphs = content.split(/\n\n+/).filter(p => p.trim().length > 0);
 
+  // Helper: improve text quality
+  function improveText(text) {
+    if (!text || text.length < 20) return text;
+    // Capitalize first letter of sentences
+    let improved = text.replace(/(^|[.!?]\s+)([a-z])/g, (m, p1, p2) => p1 + p2.toUpperCase());
+    // Fix double spaces
+    improved = improved.replace(/  +/g, ' ');
+    // Improve common weak phrases
+    improved = improved.replace(/\bvery important\b/gi, 'crucial');
+    improved = improved.replace(/\ba lot of\b/gi, 'numerous');
+    improved = improved.replace(/\bin order to\b/gi, 'to');
+    improved = improved.replace(/\bdue to the fact that\b/gi, 'because');
+    improved = improved.replace(/\bat this point in time\b/gi, 'currently');
+    improved = improved.replace(/\bit is important to note that\b/gi, 'notably,');
+    improved = improved.replace(/\bhas the ability to\b/gi, 'can');
+    improved = improved.replace(/\bin the event that\b/gi, 'if');
+    improved = improved.replace(/\bfor the purpose of\b/gi, 'for');
+    improved = improved.replace(/\bwith regard to\b/gi, 'regarding');
+    return improved;
+  }
+
+  // EDIT COMMANDS — return edit blocks
+  if (lowerMsg.includes('improve') || lowerMsg.includes('fix grammar') || lowerMsg.includes('revise') || lowerMsg.includes('edit') || lowerMsg.includes('rewrite')) {
+    if (wordCount < 5) {
+      return "Your document is empty or too short. Write some content first, then I can help improve it!";
+    }
+    const improved = improveText(content);
+    return `I've reviewed your document (${wordCount} words) and made improvements to clarity, grammar, and style.\n\n\`\`\`edit\n${improved}\n\`\`\``;
+  }
+
+  if (lowerMsg.includes('continue') || lowerMsg.includes('keep writing') || lowerMsg.includes('write more')) {
+    if (wordCount < 5) {
+      return "Your document is empty. What topic would you like me to start writing about?";
+    }
+    const lastPara = paragraphs[paragraphs.length - 1] || '';
+    const continuation = `\n\nFurthermore, building upon the preceding analysis, it becomes evident that the interplay between theoretical frameworks and practical applications yields significant insights. The existing body of research provides a robust foundation for understanding these dynamics, while recent developments have introduced novel perspectives that challenge conventional approaches. This evolving landscape demands careful consideration of both established principles and emerging paradigms.\n\nMoreover, the implications of these findings extend beyond the immediate scope of this study. As the field continues to mature, the integration of diverse methodological approaches will prove essential in addressing the complex challenges that lie ahead. Future research should focus on bridging the gap between theory and practice, ensuring that academic contributions translate into meaningful real-world impact.`;
+    const newContent = content + continuation;
+    return `I've continued writing from where you left off, adding 2 new paragraphs that maintain your paper's tone and direction.\n\n\`\`\`edit\n${newContent}\n\`\`\``;
+  }
+
+  if (lowerMsg.includes('introduction') || lowerMsg.includes('add intro')) {
+    const topicWords = content.substring(0, 200).split(/\s+/).slice(0, 10).join(' ');
+    const intro = `The landscape of contemporary research has undergone significant transformation in recent years, driven by advances in technology and evolving methodological frameworks. This paper examines the current state of research in this field, drawing upon established literature and recent findings to present a comprehensive analysis. As the demand for evidence-based approaches continues to grow, understanding the theoretical underpinnings and practical implications becomes increasingly important.\n\nThe primary objective of this study is to synthesize existing knowledge and identify key trends that shape current understanding. By examining multiple perspectives and methodological approaches, this work aims to contribute meaningfully to the ongoing academic discourse.\n\n`;
+    const newContent = intro + content;
+    return `I've added a strong introduction to the beginning of your paper.\n\n\`\`\`edit\n${newContent}\n\`\`\``;
+  }
+
+  if (lowerMsg.includes('conclusion') || lowerMsg.includes('add conclusion') || lowerMsg.includes('wrap up')) {
+    const conclusion = `\n\n## Conclusion\n\nIn conclusion, this study has examined the multifaceted dimensions of the topic under investigation, revealing several key findings that contribute to the existing body of knowledge. The analysis demonstrates that current approaches, while effective in many respects, would benefit from greater integration of interdisciplinary perspectives and methodological innovation.\n\nThe implications of these findings are significant for both academic research and practical application. Moving forward, researchers should consider adopting more holistic frameworks that account for the complex interactions between variables identified in this study. Future work should prioritize longitudinal investigations and cross-cultural comparisons to further validate and extend the present findings.\n\nUltimately, this research underscores the importance of continued scholarly inquiry in advancing our understanding of this critical area.`;
+    const newContent = content + conclusion;
+    return `I've added a conclusion section to wrap up your paper.\n\n\`\`\`edit\n${newContent}\n\`\`\``;
+  }
+
+  // INFO COMMANDS — no edit blocks
   if (lowerMsg.includes('summarize') || lowerMsg.includes('summary')) {
-    const wordCount = (notebookContent || '').split(/\s+/).filter(w => w.length > 0).length;
-    return `Here's a summary of your current draft:\n\n📊 **Word count:** ${wordCount} words\n📑 **References used:** ${references.length}\n\nYour paper currently covers the main themes outlined in your work. To strengthen it, consider:\n1. Adding more specific data points and statistics\n2. Expanding the literature review section\n3. Including a methodology section if applicable\n\nWould you like me to help with any of these areas?`;
+    const topSentences = sentences.slice(0, 3).map(s => s.trim()).join('. ');
+    return `Here's a summary of your current draft:\n\n📊 **Word count:** ${wordCount} words (${paragraphs.length} paragraphs)\n📑 **References used:** ${references.length}\n\n**Key points from your text:**\n${topSentences ? `> ${topSentences}.` : '> (Document is empty)'}\n\nTo strengthen it, consider:\n1. Adding more specific data points and statistics\n2. Expanding the literature review section\n3. Including a methodology section if applicable\n\nWould you like me to improve or continue writing?`;
   }
 
   if (lowerMsg.includes('reference') || lowerMsg.includes('cite') || lowerMsg.includes('source')) {
     if (references.length === 0) {
-      return `You don't have any references saved yet. You can:\n1. Go to the **References** panel on the right and paste a URL or DOI\n2. Use the **Reference Finder** page from the sidebar\n3. Tell me a topic and I can suggest what to search for\n\nWhat topic are you working on?`;
+      return `You don't have any references saved yet. You can:\n1. Go to the **References** panel and paste a URL or DOI\n2. Use the **Discover** page from the sidebar to search real papers\n3. Tell me a topic and I can suggest what to search for\n\nWhat topic are you working on?`;
     }
-    const refList = references.slice(0, 3).map((r, i) =>
-      `${i + 1}. **${r.authors}** (${r.year}). _${r.title}_. ${r.journal}.`
+    const refList = references.slice(0, 5).map((r, i) =>
+      `${i + 1}. **${r.authors}** (${r.year}). _${r.title}_. ${r.journal || 'N/A'}.`
     ).join('\n');
-    return `Here are your saved references:\n\n${refList}\n\nYou have **${references.length}** total references. To cite one, click the "Cite" button next to it in the References panel, or I can help you write a paragraph incorporating these sources.`;
-  }
-
-  if (lowerMsg.includes('write') || lowerMsg.includes('draft') || lowerMsg.includes('paragraph')) {
-    return `I'd be happy to help draft content! Here's a paragraph based on your current work:\n\n---\n\nThe current body of research demonstrates a growing consensus regarding the importance of integrated methodological approaches. As the literature suggests, traditional frameworks provide essential foundational understanding, while contemporary techniques offer enhanced analytical capabilities. This synthesis of approaches has proven particularly valuable in addressing complex, multifaceted research questions that resist simple categorization.\n\n---\n\nWould you like me to:\n1. Adjust the tone or formality?\n2. Focus on a specific section?\n3. Add citations from your saved references?`;
+    return `Here are your saved references:\n\n${refList}\n\nYou have **${references.length}** total references. To cite one, click "Cite" in the References panel. Want me to write a paragraph incorporating these sources?`;
   }
 
   if (lowerMsg.includes('outline') || lowerMsg.includes('structure')) {
-    return `Here's a suggested outline for your paper:\n\n## Recommended Structure\n\n1. **Introduction** (300-400 words)\n   - Background context\n   - Research problem statement\n   - Objectives and scope\n\n2. **Literature Review** (800-1000 words)\n   - Theoretical framework\n   - Key studies and findings\n   - Research gaps\n\n3. **Methodology** (400-600 words)\n   - Research design\n   - Data collection\n   - Analysis approach\n\n4. **Results & Discussion** (600-800 words)\n   - Key findings\n   - Interpretation\n   - Comparison with literature\n\n5. **Conclusion** (200-300 words)\n   - Summary\n   - Implications\n   - Future research\n\nWant me to start drafting any section?`;
+    return `Here's a suggested outline based on your ${wordCount}-word document:\n\n## Recommended Structure\n\n1. **Introduction** (300-400 words)\n   - Background context\n   - Research problem statement\n   - Objectives and scope\n\n2. **Literature Review** (800-1000 words)\n   - Theoretical framework\n   - Key studies and findings\n   - Research gaps\n\n3. **Methodology** (400-600 words)\n   - Research design\n   - Data collection\n   - Analysis approach\n\n4. **Results & Discussion** (600-800 words)\n   - Key findings\n   - Interpretation\n   - Comparison with literature\n\n5. **Conclusion** (200-300 words)\n   - Summary\n   - Implications\n   - Future research\n\nWant me to start drafting any section? I can add it directly to your document.`;
   }
 
-  if (lowerMsg.includes('improve') || lowerMsg.includes('edit') || lowerMsg.includes('revise')) {
-    return `I can help improve your writing! Here are some suggestions:\n\n✨ **Style improvements:**\n- Use more active voice constructions\n- Vary sentence length for better flow\n- Add transitional phrases between paragraphs\n\n📝 **Content improvements:**\n- Strengthen your thesis statement\n- Add more specific evidence and data\n- Include counterarguments for balance\n\n🔗 **Citation improvements:**\n- Ensure all claims are properly supported\n- Add in-text citations where needed\n- Cross-reference with your saved sources\n\nPaste a specific paragraph and I'll revise it for you!`;
+  if (lowerMsg.includes('write') || lowerMsg.includes('draft') || lowerMsg.includes('paragraph')) {
+    const newParagraph = `\n\nThe current body of research demonstrates a growing consensus regarding the importance of integrated methodological approaches. As the literature suggests, traditional frameworks provide essential foundational understanding, while contemporary techniques offer enhanced analytical capabilities. This synthesis of approaches has proven particularly valuable in addressing complex, multifaceted research questions that resist simple categorization. Recent empirical evidence further supports the notion that collaborative, interdisciplinary research yields more robust and generalizable outcomes.`;
+    const newContent = content + newParagraph;
+    return `I've drafted a new paragraph and added it to your document.\n\n\`\`\`edit\n${newContent}\n\`\`\``;
   }
 
   // Default response
-  return `I'm here to help with your paper! I can:\n\n📝 **Write** — Draft paragraphs, sections, or full papers\n📋 **Outline** — Create structured outlines for your topic\n🔍 **Research** — Help find and organize references\n✍️ **Edit** — Improve clarity, tone, and academic style\n📊 **Summarize** — Get an overview of your current draft\n\nWhat would you like help with?`;
+  return `I'm reading your document (${wordCount} words). I can:\n\n✍️ **Edit** — "Improve my writing" or "Fix grammar"\n📝 **Write** — "Continue writing" or "Add a paragraph"\n📋 **Outline** — "Create an outline" for structure\n📖 **Sections** — "Add introduction" or "Add conclusion"\n📊 **Summarize** — Get an overview of your draft\n🔍 **References** — Help cite and organize sources\n\nAll edits are previewed first — you can **Keep** or **Undo** them.`;
 }
 
 // ═══════════════════════════════════════
@@ -239,101 +297,79 @@ app.delete('/api/references/:id', (req, res) => {
   }
 });
 
-// Search references by topic with relevance scoring
-app.get('/api/references/search', (req, res) => {
+// Search references by topic — uses OpenAlex API (real academic papers)
+app.get('/api/references/search', async (req, res) => {
   try {
     const { q } = req.query;
     if (!q || !q.trim()) return res.json([]);
 
-    const topic = q.trim().toLowerCase();
-    const words = topic.split(/\s+/).filter(w => w.length > 2);
+    const topic = q.trim();
+    const url = `https://api.openalex.org/works?search=${encodeURIComponent(topic)}&per_page=15&sort=relevance_score:desc&filter=type:article&select=id,title,authorships,publication_year,primary_location,doi,abstract_inverted_index,cited_by_count`;
 
-    // Mock: generate scored references based on query
-    const mockResults = generateSearchResults(topic, words);
-    res.json(mockResults);
+    const response = await fetch(url, {
+      headers: { 'User-Agent': 'Specter/1.0 (mailto:specter@academic.app)' }
+    });
+
+    if (!response.ok) {
+      throw new Error(`OpenAlex API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const maxCitations = Math.max(1, ...data.results.map(r => r.cited_by_count || 0));
+
+    const results = data.results.map((work, index) => {
+      // Reconstruct abstract from inverted index
+      let abstract = '';
+      if (work.abstract_inverted_index) {
+        const words = [];
+        for (const [word, positions] of Object.entries(work.abstract_inverted_index)) {
+          positions.forEach(pos => { words[pos] = word; });
+        }
+        abstract = words.filter(Boolean).join(' ');
+      }
+
+      // Extract authors
+      const authors = (work.authorships || [])
+        .slice(0, 3)
+        .map(a => a.author?.display_name || 'Unknown')
+        .join(', ')
+        + (work.authorships?.length > 3 ? ' et al.' : '');
+
+      // Extract journal
+      const journal = work.primary_location?.source?.display_name || '';
+
+      // Compute relevance score: position-based (top results more relevant) + citation boost
+      const positionScore = Math.max(0, 95 - (index * 5));
+      const citationBoost = Math.round((work.cited_by_count || 0) / maxCitations * 10);
+      const relevanceScore = Math.min(99, positionScore + citationBoost);
+
+      // Extract DOI — keep both full URL and short DOI
+      const doiFull = work.doi || null; // e.g. "https://doi.org/10.1234/..."
+      const doiShort = doiFull ? doiFull.replace('https://doi.org/', '') : null;
+
+      return {
+        id: generateId(),
+        title: work.title || 'Untitled',
+        authors: authors || 'Unknown',
+        year: (work.publication_year || '').toString(),
+        journal,
+        doi: doiShort,
+        abstract: abstract.substring(0, 500),
+        url: doiFull, // Full clickable URL
+        confidence: (journal && doiShort) ? 'verified' : doiShort ? 'partial' : 'manual',
+        relevance_score: relevanceScore,
+        cited_by_count: work.cited_by_count || 0,
+      };
+    });
+
+    // Sort by relevance score descending
+    results.sort((a, b) => b.relevance_score - a.relevance_score);
+    res.json(results);
   } catch (error) {
+    console.error('Search error:', error.message);
     res.status(500).json({ error: error.message });
   }
 });
-
-function generateSearchResults(topic, words) {
-  const authorSets = [
-    { authors: 'Zhang, W. & Chen, L.', year: '2024' },
-    { authors: 'Patel, R., Kumar, S., & Singh, A.', year: '2023' },
-    { authors: 'Anderson, T. & Williams, K.', year: '2025' },
-    { authors: 'Liu, H., Wang, J., & Li, M.', year: '2022' },
-    { authors: 'Thompson, M. & Garcia, A.', year: '2024' },
-    { authors: 'Kim, Y., Park, D., & Lee, S.', year: '2023' },
-    { authors: 'Martinez, C. & Brown, R.', year: '2025' },
-    { authors: 'Nakamura, T. & Sato, K.', year: '2024' },
-    { authors: 'Johnson, E., Davis, P., & Miller, F.', year: '2023' },
-    { authors: 'Smith, A. & Robinson, G.', year: '2022' },
-    { authors: 'Wilson, D. & Taylor, J.', year: '2025' },
-    { authors: 'Chen, X., Zhao, Y., & Huang, R.', year: '2024' },
-  ];
-
-  const journals = [
-    'Nature Machine Intelligence', 'IEEE Transactions on AI', 'Journal of Computational Science',
-    'ACM Computing Surveys', 'Artificial Intelligence Review', 'Neural Computing and Applications',
-    'Computers & Education', 'Educational Technology Research', 'Journal of Learning Analytics',
-    'Science', 'PLOS ONE', 'Frontiers in Education', 'International Journal of STEM Education'
-  ];
-
-  const methodTerms = ['systematic review', 'meta-analysis', 'empirical study', 'case study',
-    'experimental design', 'mixed-methods', 'longitudinal study', 'cross-sectional analysis'];
-
-  const capTopic = topic.replace(/\b\w/g, l => l.toUpperCase());
-  const results = [];
-
-  for (let i = 0; i < Math.min(12, 6 + words.length * 2); i++) {
-    const auth = authorSets[i % authorSets.length];
-    const journal = journals[i % journals.length];
-    const method = methodTerms[i % methodTerms.length];
-
-    // Compute relevance score — higher for more specific matches
-    const baseScore = 95 - (i * 6);
-    const jitter = Math.floor(Math.random() * 8) - 4;
-    const score = Math.max(20, Math.min(99, baseScore + jitter));
-
-    const titles = [
-      `A ${method} of ${capTopic}: Current Trends and Future Directions`,
-      `Advancing ${capTopic} Through Computational Methods: A Comprehensive Review`,
-      `The Impact of ${capTopic} on Contemporary Research Practices`,
-      `Exploring ${capTopic}: Evidence from Recent Empirical Studies`,
-      `${capTopic} in Practice: Lessons from a ${method}`,
-      `Bridging Theory and Practice in ${capTopic}: New Insights`,
-      `Rethinking ${capTopic}: A Critical Analysis of Recent Developments`,
-      `${capTopic} and Its Applications: A ${method}`,
-      `Novel Approaches to ${capTopic}: Integrating Multiple Perspectives`,
-      `The Evolution of ${capTopic}: A Decade of Progress`,
-      `Challenges and Opportunities in ${capTopic}: A Review`,
-      `Foundations of ${capTopic}: A Theoretical Framework`,
-    ];
-
-    const abstracts = [
-      `This ${method} examines the current state of ${topic} across ${15 + i * 3} peer-reviewed studies. Our findings reveal significant trends in methodology and a growing emphasis on interdisciplinary collaboration. Results indicate that ${topic} has seen a ${65 + i}% increase in research output over the past five years.`,
-      `We present a comprehensive analysis of ${topic}, drawing upon data from multiple international research groups. Our approach combines quantitative metrics with qualitative assessments to provide a nuanced understanding of the field's trajectory. Key findings suggest important implications for both theory and practice.`,
-      `This paper investigates the relationship between ${topic} and contemporary academic frameworks through a ${method}. Analyzing ${20 + i * 5} primary sources, we identify critical success factors and propose a unified model for future research endeavors in this rapidly evolving domain.`,
-    ];
-
-    results.push({
-      id: generateId(),
-      title: titles[i % titles.length],
-      authors: auth.authors,
-      year: auth.year,
-      journal: journal,
-      doi: `10.${1000 + Math.floor(Math.random() * 9000)}/research.${Math.random().toString(36).substring(2, 8)}`,
-      abstract: abstracts[i % abstracts.length],
-      url: null,
-      confidence: score >= 80 ? 'verified' : score >= 50 ? 'partial' : 'manual',
-      relevance_score: score,
-    });
-  }
-
-  // Sort by relevance score descending
-  results.sort((a, b) => b.relevance_score - a.relevance_score);
-  return results;
-}
 
 // ═══════════════════════════════════════
 // Plan Routes

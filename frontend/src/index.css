@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /* ═══════════════════════════════════════════════════════════════
-   👻 Specter — Design System (Light/Dark Mode)
+   Specter — Design System (Light/Dark Mode)
    ═══════════════════════════════════════════════════════════════ */
 
 @theme {
@@ -63,6 +63,14 @@
 
   --accent-bg: oklch(0.55 0.22 275 / 0.08);
   --accent-border: oklch(0.55 0.22 275 / 0.15);
+
+  /* Sidebar */
+  --sidebar-bg: #f5f3fc;
+  --sidebar-border: rgba(100, 80, 160, 0.1);
+  --sidebar-hover: rgba(100, 80, 160, 0.06);
+  --sidebar-text: #1a1625;
+  --sidebar-link: #6b6080;
+  --sidebar-link-hover: #3d3555;
 }
 
 html.dark {
@@ -88,6 +96,14 @@ html.dark {
 
   --accent-bg: oklch(0.55 0.22 275 / 0.1);
   --accent-border: oklch(0.55 0.22 275 / 0.2);
+
+  /* Sidebar */
+  --sidebar-bg: #0a0910;
+  --sidebar-border: rgba(255, 255, 255, 0.04);
+  --sidebar-hover: rgba(255, 255, 255, 0.04);
+  --sidebar-text: #e0dce8;
+  --sidebar-link: #5c566e;
+  --sidebar-link-hover: #a09ab0;
 }
 
 /* ═══ Keyframes ═══ */

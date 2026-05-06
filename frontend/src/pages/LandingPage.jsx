@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import SpecterLogo from '../components/SpecterLogo';
 import './LandingPage.css';
 
 export default function LandingPage() {
@@ -7,10 +8,10 @@ export default function LandingPage() {
 
   const features = [
     { icon: '📅', title: 'Smart Calendar', desc: 'Schedule tasks with date and time. Set auto-start so AI works at your deadline, even when you\'re away.', link: '/calendar' },
-    { icon: '👻', title: 'AI Ghost Writer', desc: 'Chat with Specter in your notebook. Draft paragraphs, create outlines, get writing advice — all context-aware.', link: '/app' },
+    { icon: '✦', title: 'AI Writer', desc: 'Chat with Specter in your notebook. Draft paragraphs, create outlines, get writing advice — all context-aware.', link: '/notebooks' },
     { icon: '📓', title: 'Notebook Manager', desc: 'Create and manage multiple notebooks. Switch between projects instantly. Word counts, refs, and tasks at a glance.', link: '/notebooks' },
     { icon: '🔍', title: 'Reference Finder', desc: 'Find and save academic references. Cite them in your work with one click and auto-generate your bibliography.', link: '/references' },
-    { icon: '🔗', title: 'Citation Attribution', desc: 'Highlight any text to check if it\'s cited, matches a reference, or is your original writing. Never miss a citation.', link: '/app' },
+    { icon: '✓', title: 'Review & Accept', desc: 'Review AI-generated drafts in a dedicated panel. Accept, edit, or redo — every change stays under your control.', link: '/notebooks' },
     { icon: '⚡', title: 'Auto-Start Tasks', desc: 'Set tasks to auto-start or pre-fetch references. AI gathers everything before your deadline so you\'re always ready.', link: '/calendar' },
   ];
 
@@ -36,7 +37,7 @@ export default function LandingPage() {
       <nav className="landing-nav">
         <div className="landing-nav-inner">
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div className="specter-logo" style={{ width: '32px', height: '32px', fontSize: '0.9rem' }}>👻</div>
+            <SpecterLogo size={32} />
             <span style={{ fontSize: '1rem', fontWeight: 800, color: '#e8e4f0', letterSpacing: '-0.02em' }}>Specter</span>
           </div>
           <div className="landing-nav-links">
@@ -55,7 +56,7 @@ export default function LandingPage() {
         <div className="hero-orb" />
         <div className="hero-orb-2" />
         <div className="hero-content">
-          <div className="hero-pill">👻 Your AI ghost writer for academics</div>
+          <div className="hero-pill">✦ AI-powered academic writing assistant</div>
           <h1 className="hero-title">
             Workspace That Writes<br />
             <span className="hero-gradient">Everything for You</span>
@@ -176,7 +177,7 @@ export default function LandingPage() {
         <div className="footer-inner">
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-              <span className="animate-haunt">👻</span>
+              <SpecterLogo size={36} />
               <span style={{ fontWeight: 700, color: '#e8e4f0' }}>Specter</span>
             </div>
             <p style={{ fontSize: '0.75rem', color: '#555', maxWidth: '250px', lineHeight: 1.6 }}>

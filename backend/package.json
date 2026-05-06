@@ -1,20 +1,20 @@
 {
-  "name": "backend",
-  "version": "1.0.0",
-  "description": "",
-  "main": "server.js",
+  "name": "specter-api",
+  "version": "2.0.0",
+  "description": "Specter API — Vercel Serverless + Supabase",
   "type": "module",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node --watch server.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "vercel dev --listen 3001",
+    "deploy": "vercel --prod",
+    "deploy:preview": "vercel"
   },
   "dependencies": {
-    "axios": "^1.16.0",
-    "better-sqlite3": "^12.9.0",
-    "cors": "^2.8.6",
-    "dotenv": "^17.4.2",
-    "express": "^5.2.1",
-    "node-fetch": "^3.3.2"
+    "@supabase/supabase-js": "^2.49.4"
+  },
+  "devDependencies": {
+    "vercel": "^41.7.4"
+  },
+  "engines": {
+    "node": ">=18"
   }
 }
