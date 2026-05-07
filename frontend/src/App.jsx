@@ -16,6 +16,8 @@ import DashboardPage from './pages/DashboardPage';
 import AIDetectionPage from './pages/AIDetectionPage';
 import TemplatesPage from './pages/TemplatesPage';
 import SummarizerPage from './pages/SummarizerPage';
+import SynthesisPage from './pages/SynthesisPage';
+import AskPage from './pages/AskPage';
 import { notebooks, references as refsApi, plans as plansApi, chat as chatApi, BASE as API_BASE } from './api';
 import { FiFileText, FiCheckSquare, FiBookOpen, FiMessageSquare, FiX, FiAlertCircle, FiCheck, FiRotateCcw, FiChevronDown, FiChevronRight } from 'react-icons/fi';
 import './App.css';
@@ -768,6 +770,12 @@ function AppShell() {
           } />
           <Route path="/summarizer" element={
             <SummarizerPage />
+          } />
+          <Route path="/synthesis" element={
+            <SynthesisPage allNotebooks={allNotebooks} />
+          } />
+          <Route path="/ask" element={
+            <AskPage allNotebooks={allNotebooks} />
           } />
           <Route path="*" element={
             <NotebooksPage allNotebooks={allNotebooks}

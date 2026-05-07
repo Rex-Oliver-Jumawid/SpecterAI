@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { FiCalendar, FiSearch, FiSun, FiMoon, FiBookOpen, FiLayers, FiBarChart2, FiShield, FiGrid, FiFileText } from 'react-icons/fi';
+import { FiCalendar, FiSearch, FiSun, FiMoon, FiBookOpen, FiLayers, FiBarChart2, FiShield, FiGrid, FiFileText, FiZap, FiMessageCircle } from 'react-icons/fi';
 import SpecterLogo from './SpecterLogo';
 
 export default function AppSidebar({ darkMode, onToggleTheme }) {
@@ -13,8 +13,10 @@ export default function AppSidebar({ darkMode, onToggleTheme }) {
     { to: '/references', icon: <FiSearch size={17} />, label: 'References' },
     { to: '/comparison', icon: <FiLayers size={17} />, label: 'Comparison' },
     { to: '/ai-detection', icon: <FiShield size={17} />, label: 'AI Detection' },
+    { to: '/synthesis', icon: <FiZap size={17} />, label: 'Synthesis' },
     { to: '/summarizer', icon: <FiFileText size={17} />, label: 'Summarizer' },
     { to: '/templates', icon: <FiGrid size={17} />, label: 'Templates' },
+    { to: '/ask', icon: <FiMessageCircle size={17} />, label: 'Ask AI' },
   ];
 
   return (
