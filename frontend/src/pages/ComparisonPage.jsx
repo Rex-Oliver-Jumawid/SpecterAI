@@ -1,17 +1,12 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { FiFileText, FiChevronDown, FiChevronRight, FiLayers, FiX, FiDownload, FiRefreshCw, FiBookOpen } from 'react-icons/fi';
+import React, { useState, useEffect } from 'react';
+import { FiLayers, FiRefreshCw, FiBookOpen, FiCheckCircle, FiAlertCircle, FiTrendingUp, FiAward } from 'react-icons/fi';
 import { references as refsApi } from '../api';
 
 export default function ComparisonPage({ allNotebooks = [] }) {
-  const [activeTab, setActiveTab] = useState('report');
-  const [selectedRef, setSelectedRef] = useState(null);
   const [compareA, setCompareA] = useState(null);
   const [compareB, setCompareB] = useState(null);
-  const [generatedReport, setGeneratedReport] = useState(null);
   const [comparisonResult, setComparisonResult] = useState(null);
   const [generating, setGenerating] = useState(false);
-
-  // Notebook-based reference loading
   const [selectedNotebookId, setSelectedNotebookId] = useState('');
   const [refs, setRefs] = useState([]);
   const [loadingRefs, setLoadingRefs] = useState(false);
@@ -19,134 +14,157 @@ export default function ComparisonPage({ allNotebooks = [] }) {
   useEffect(() => {
     if (!selectedNotebookId) { setRefs([]); return; }
     setLoadingRefs(true);
-    setSelectedRef(null);
-    setCompareA(null);
-    setCompareB(null);
-    setGeneratedReport(null);
-    setComparisonResult(null);
+    setCompareA(null); setCompareB(null); setComparisonResult(null);
     refsApi.list(selectedNotebookId)
       .then(data => setRefs(data))
       .catch(() => setRefs([]))
       .finally(() => setLoadingRefs(false));
   }, [selectedNotebookId]);
 
-  // Generate a structured report for a single reference
-  const generateReport = (ref) => {
-    setGenerating(true);
-    setSelectedRef(ref);
-
-    // Simulated AI report
-    setTimeout(() => {
-      const report = {
-        title: ref.title,
-        authors: ref.authors || 'Unknown',
-        year: ref.year || 'N/A',
-        journal: ref.journal || 'Not specified',
-        doi: ref.doi || 'N/A',
-        trustScore: ref.journal && ref.doi && ref.abstract ? 85 : ref.journal || ref.doi ? 65 : 40,
-        overview: `This study${ref.year ? ` (${ref.year})` : ''} explores ${ref.title?.toLowerCase() || 'the research topic'}. ${ref.abstract ? ref.abstract.substring(0, 250) + '...' : 'No abstract available for deeper analysis.'}`,
-        keyFindings: [
-          ref.abstract ? `The research addresses key aspects of ${ref.title?.split(' ').slice(0, 5).join(' ').toLowerCase() || 'the topic'}, providing empirical evidence.` : 'Key findings not extractable without abstract.',
-          ref.cited_by_count > 50 ? `Widely cited with ${ref.cited_by_count.toLocaleString()} citations, indicating significant academic impact.` : 'Limited citation data available.',
-          ref.journal ? `Published in ${ref.journal}, a peer-reviewed venue.` : 'Publication venue not verified.',
-        ],
-        methodology: ref.abstract
-          ? `Based on the abstract, this paper appears to employ a ${ref.abstract.toLowerCase().includes('survey') ? 'survey-based' : ref.abstract.toLowerCase().includes('experiment') ? 'experimental' : ref.abstract.toLowerCase().includes('case study') ? 'case study' : 'mixed-methods'} approach.`
-          : 'Methodology cannot be determined without access to the full text.',
-        limitations: [
-          !ref.abstract ? 'Full text not available for comprehensive analysis.' : 'Analysis is based on metadata and abstract only.',
-          ref.year && (new Date().getFullYear() - ref.year > 5) ? `Published ${new Date().getFullYear() - ref.year} years ago — findings may need updating.` : null,
-          !ref.doi ? 'No DOI available — source verification is limited.' : null,
-        ].filter(Boolean),
-        recommendations: ref.journal && ref.doi
-          ? 'This source is suitable for academic citation. Verify relevance to your specific research question.'
-          : 'Consider supplementing with additional verified sources for stronger arguments.',
-      };
-      setGeneratedReport(report);
-      setGenerating(false);
-    }, 1200);
-  };
-
-  // Generate comparison between two references
   const generateComparison = () => {
+    if (!compareA || compareB) {} // both needed
     if (!compareA || !compareB) return;
     setGenerating(true);
 
     setTimeout(() => {
-      const yearA = compareA.year || 'N/A';
-      const yearB = compareB.year || 'N/A';
+      const yearA = compareA.year || 0;
+      const yearB = compareB.year || 0;
       const citesA = compareA.cited_by_count || 0;
       const citesB = compareB.cited_by_count || 0;
+      const lowerA = (compareA.abstract || '').toLowerCase();
+      const lowerB = (compareB.abstract || '').toLowerCase();
+
+      // Detect methodology
+      const detectMethod = (lower) => {
+        if (lower.includes('survey')) return 'Survey-based';
+        if (lower.includes('experiment')) return 'Experimental';
+        if (lower.includes('interview')) return 'Qualitative';
+        if (lower.includes('case study')) return 'Case Study';
+        if (lower.includes('review') || lower.includes('meta-analysis')) return 'Systematic Review';
+        if (lower.includes('regression') || lower.includes('statistical')) return 'Statistical';
+        if (lower.length > 50) return 'Mixed Methods';
+        return 'Not determinable';
+      };
+
+      // Find shared keywords
+      const getKeywords = (text) => {
+        const stop = new Set(['the','of','and','in','a','to','for','on','with','is','an','by','from','this','that','are','was','were','be','or','not','it','as']);
+        return [...new Set(text.toLowerCase().split(/\s+/).filter(w => w.length > 4 && !stop.has(w)))];
+      };
+      const kwA = getKeywords(compareA.title || '');
+      const kwB = getKeywords(compareB.title || '');
+      const shared = kwA.filter(w => kwB.includes(w));
 
       const comparison = {
         dimensions: [
           {
             label: 'Publication Year',
-            paperA: yearA.toString(),
-            paperB: yearB.toString(),
-            verdict: yearA > yearB ? 'Paper 1 is more recent' : yearB > yearA ? 'Paper 2 is more recent' : 'Published in the same year'
+            paperA: yearA ? yearA.toString() : 'Unknown',
+            paperB: yearB ? yearB.toString() : 'Unknown',
+            verdict: yearA > yearB ? 'Paper 1 is more recent' : yearB > yearA ? 'Paper 2 is more recent' : yearA ? 'Published the same year' : 'Years unknown',
+            winner: yearA > yearB ? 'a' : yearB > yearA ? 'b' : 'tie'
           },
           {
-            label: 'Journal',
+            label: 'Journal / Venue',
             paperA: compareA.journal || 'Not specified',
             paperB: compareB.journal || 'Not specified',
-            verdict: compareA.journal && compareB.journal ? 'Both published in peer-reviewed journals' : 'One or both lack journal verification'
+            verdict: compareA.journal && compareB.journal ? 'Both peer-reviewed' : !compareA.journal && !compareB.journal ? 'Neither specifies a journal' : 'One lacks journal verification',
+            winner: compareA.journal && !compareB.journal ? 'a' : compareB.journal && !compareA.journal ? 'b' : 'tie'
           },
           {
-            label: 'Citations',
+            label: 'Citation Count',
             paperA: citesA > 0 ? `${citesA.toLocaleString()} citations` : 'No data',
             paperB: citesB > 0 ? `${citesB.toLocaleString()} citations` : 'No data',
-            verdict: citesA > citesB ? 'Paper 1 has more academic impact' : citesB > citesA ? 'Paper 2 has more academic impact' : 'Similar citation counts'
+            verdict: citesA > citesB ? `Paper 1 has ${(citesA - citesB).toLocaleString()} more citations` : citesB > citesA ? `Paper 2 has ${(citesB - citesA).toLocaleString()} more citations` : 'Similar citation impact',
+            winner: citesA > citesB ? 'a' : citesB > citesA ? 'b' : 'tie'
           },
           {
             label: 'DOI Verification',
-            paperA: compareA.doi ? '✓ Verified' : '✗ Not available',
-            paperB: compareB.doi ? '✓ Verified' : '✗ Not available',
-            verdict: compareA.doi && compareB.doi ? 'Both sources are DOI-verified' : 'Not all sources are verifiable'
+            paperA: compareA.doi ? '✓ Verified' : '✗ None',
+            paperB: compareB.doi ? '✓ Verified' : '✗ None',
+            verdict: compareA.doi && compareB.doi ? 'Both verifiable' : 'Source verification gap',
+            winner: compareA.doi && !compareB.doi ? 'a' : compareB.doi && !compareA.doi ? 'b' : 'tie'
           },
           {
-            label: 'Abstract Quality',
-            paperA: compareA.abstract ? `${compareA.abstract.length} chars` : 'None',
-            paperB: compareB.abstract ? `${compareB.abstract.length} chars` : 'None',
-            verdict: compareA.abstract && compareB.abstract ? 'Both provide abstracts for analysis' : 'Limited metadata for comparison'
+            label: 'Abstract Available',
+            paperA: compareA.abstract ? `Yes (${compareA.abstract.length} chars)` : 'No',
+            paperB: compareB.abstract ? `Yes (${compareB.abstract.length} chars)` : 'No',
+            verdict: compareA.abstract && compareB.abstract ? 'Both provide abstracts' : 'Limited metadata',
+            winner: compareA.abstract && !compareB.abstract ? 'a' : compareB.abstract && !compareA.abstract ? 'b' : 'tie'
           },
           {
-            label: 'Research Focus',
-            paperA: compareA.abstract ? compareA.abstract.substring(0, 100) + '...' : compareA.title || 'Unknown',
-            paperB: compareB.abstract ? compareB.abstract.substring(0, 100) + '...' : compareB.title || 'Unknown',
-            verdict: 'Review focus areas for topical relevance to your research'
+            label: 'Methodology',
+            paperA: detectMethod(lowerA),
+            paperB: detectMethod(lowerB),
+            verdict: detectMethod(lowerA) === detectMethod(lowerB) ? 'Same approach — good for validation' : 'Different approaches — good for triangulation',
+            winner: 'tie'
+          },
+          {
+            label: 'Recency',
+            paperA: yearA ? `${new Date().getFullYear() - yearA} years old` : 'Unknown',
+            paperB: yearB ? `${new Date().getFullYear() - yearB} years old` : 'Unknown',
+            verdict: yearA && yearB ? (Math.abs(yearA - yearB) <= 2 ? 'Similar timeframe' : `${Math.abs(yearA - yearB)} year gap between publications`) : 'Cannot compare',
+            winner: yearA > yearB ? 'a' : yearB > yearA ? 'b' : 'tie'
+          },
+          {
+            label: 'Authors',
+            paperA: compareA.authors || 'Unknown',
+            paperB: compareB.authors || 'Unknown',
+            verdict: compareA.authors === compareB.authors ? 'Same authors' : 'Different research teams',
+            winner: 'tie'
           },
         ],
-        summary: `Comparing "${compareA.title}" (${yearA}) with "${compareB.title}" (${yearB}). ${citesA + citesB > 100 ? 'Both papers have significant academic recognition.' : 'Consider the recency and verification status of each source.'
-          } ${compareA.doi && compareB.doi ? 'Both are DOI-verified, indicating reliable provenance.' : 'Verify source authenticity before citing.'}`
+        sharedKeywords: shared,
+        topicOverlap: shared.length > 2 ? 'High' : shared.length > 0 ? 'Moderate' : 'Low',
+        strengths: {
+          a: [
+            citesA > citesB ? `Higher citation count (${citesA.toLocaleString()})` : null,
+            yearA > yearB ? 'More recent publication' : null,
+            compareA.doi && !compareB.doi ? 'DOI-verified' : null,
+            compareA.journal && !compareB.journal ? 'Published in named journal' : null,
+            compareA.abstract && compareA.abstract.length > (compareB.abstract?.length || 0) ? 'More detailed abstract' : null,
+          ].filter(Boolean),
+          b: [
+            citesB > citesA ? `Higher citation count (${citesB.toLocaleString()})` : null,
+            yearB > yearA ? 'More recent publication' : null,
+            compareB.doi && !compareA.doi ? 'DOI-verified' : null,
+            compareB.journal && !compareA.journal ? 'Published in named journal' : null,
+            compareB.abstract && compareB.abstract.length > (compareA.abstract?.length || 0) ? 'More detailed abstract' : null,
+          ].filter(Boolean),
+        },
+        overallVerdict: (() => {
+          let scoreA = 0, scoreB = 0;
+          if (citesA > citesB) scoreA++; else if (citesB > citesA) scoreB++;
+          if (yearA > yearB) scoreA++; else if (yearB > yearA) scoreB++;
+          if (compareA.doi) scoreA++; if (compareB.doi) scoreB++;
+          if (compareA.journal) scoreA++; if (compareB.journal) scoreB++;
+          if (compareA.abstract) scoreA++; if (compareB.abstract) scoreB++;
+          if (scoreA > scoreB) return { winner: 'Paper 1', detail: `Paper 1 scores higher across ${scoreA} of 5 quality indicators.` };
+          if (scoreB > scoreA) return { winner: 'Paper 2', detail: `Paper 2 scores higher across ${scoreB} of 5 quality indicators.` };
+          return { winner: 'Tie', detail: 'Both papers score equally across quality indicators. Consider content relevance to decide.' };
+        })(),
+        summary: `Comparing "${compareA.title}" (${yearA || 'N/A'}) with "${compareB.title}" (${yearB || 'N/A'}). ${citesA + citesB > 100 ? 'Combined citation impact is strong.' : 'Combined citation data is limited.'} ${shared.length > 0 ? `Shared topic keywords: ${shared.join(', ')}.` : 'No obvious keyword overlap in titles.'} ${compareA.doi && compareB.doi ? 'Both are DOI-verified.' : 'Verify sources independently.'} ${detectMethod(lowerA) !== detectMethod(lowerB) ? 'Different methodologies offer complementary perspectives.' : 'Similar methodologies — useful for corroboration.'}`,
+        useCase: citesA > 100 || citesB > 100
+          ? 'Both papers are suitable for academic citation. Use the higher-cited paper for foundational claims and the other for supporting or contrasting evidence.'
+          : 'Consider supplementing with additional highly-cited sources to strengthen your literature base.',
       };
       setComparisonResult(comparison);
       setGenerating(false);
     }, 1500);
   };
 
-  const getScoreColor = (score) => {
-    if (score >= 80) return '#4ade80';
-    if (score >= 60) return '#fbbf24';
-    if (score >= 40) return '#fb923c';
-    return '#f87171';
-  };
-
-  const RefSelector = ({ value, onChange, exclude, label }) => (
+  const RefSelector = ({ value, onChange, exclude, label, color }) => (
     <div style={{ flex: 1 }}>
-      <label style={{ fontSize: '0.68rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '6px', display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+      <label style={{ fontSize: '0.68rem', fontWeight: 600, color, marginBottom: '6px', display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
         {label}
       </label>
       <select
         value={value?.id || ''}
-        onChange={e => {
-          const ref = refs.find(r => r.id == e.target.value);
-          onChange(ref || null);
-        }}
+        onChange={e => { const ref = refs.find(r => r.id == e.target.value); onChange(ref || null); setComparisonResult(null); }}
         className="input-specter"
         style={{ width: '100%', padding: '10px 12px', fontSize: '0.78rem' }}
       >
-        <option value="">— Select a reference —</option>
+        <option value="">Select a reference</option>
         {refs.filter(r => !exclude || r.id !== exclude.id).map(r => (
           <option key={r.id} value={r.id}>{r.title} ({r.year || 'N/A'})</option>
         ))}
@@ -164,30 +182,25 @@ export default function ComparisonPage({ allNotebooks = [] }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
       {/* Header */}
-      <div style={{ padding: '24px 32px 0', background: 'var(--bg-secondary)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
-          <div>
-            <h1 style={{
-              fontSize: '1.4rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0,
-              fontFamily: 'var(--font-serif)', display: 'flex', alignItems: 'center', gap: '10px'
-            }}>
-              <div style={{
-                width: '36px', height: '36px', borderRadius: '10px',
-                background: 'linear-gradient(135deg, #f59e0b, #ef4444)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center'
-              }}>
-                <FiLayers size={18} color="white" />
-              </div>
-              Comparison
-            </h1>
-            <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '4px 0 0', paddingLeft: '46px' }}>
-              Generate reports & compare your saved references side-by-side
-            </p>
+      <div style={{ padding: '24px 32px 20px', borderBottom: '1px solid var(--border-color)', background: 'var(--bg-secondary)' }}>
+        <h1 style={{
+          fontSize: '1.4rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0,
+          fontFamily: 'var(--font-serif)', display: 'flex', alignItems: 'center', gap: '10px'
+        }}>
+          <div style={{
+            width: '36px', height: '36px', borderRadius: '10px',
+            background: 'linear-gradient(135deg, #f59e0b, #ef4444)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center'
+          }}>
+            <FiLayers size={18} color="white" />
           </div>
-        </div>
+          Compare Sources
+        </h1>
+        <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '4px 0 0', paddingLeft: '46px' }}>
+          Side-by-side analysis of two references with quality scoring
+        </p>
 
-        {/* Notebook Selector */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '16px' }}>
           <FiBookOpen size={15} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
           <select
             value={selectedNotebookId}
@@ -195,285 +208,178 @@ export default function ComparisonPage({ allNotebooks = [] }) {
             className="input-specter"
             style={{ flex: 1, maxWidth: '400px', padding: '8px 12px', fontSize: '0.78rem' }}
           >
-            <option value=""> Select a notebook </option>
+            <option value="">Select a notebook</option>
             {allNotebooks.map(nb => (
               <option key={nb.id} value={nb.id}>{nb.title || 'Untitled'}</option>
             ))}
           </select>
-          {loadingRefs && <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Loading refs...</span>}
+          {loadingRefs && <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Loading...</span>}
           {selectedNotebookId && !loadingRefs && (
-            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-              {refs.length} reference{refs.length !== 1 ? 's' : ''} found
-            </span>
+            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{refs.length} refs</span>
           )}
-        </div>
-
-        {/* Tabs */}
-        <div style={{ display: 'flex', gap: '0', borderBottom: '1px solid var(--border-color)' }}>
-          {[{ id: 'report', label: 'Generate Report', icon: <FiFileText size={13} /> },
-          { id: 'compare', label: 'Compare Sources', icon: <FiLayers size={13} /> }].map(tab => (
-            <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{
-              display: 'flex', alignItems: 'center', gap: '6px',
-              padding: '10px 20px', border: 'none', cursor: 'pointer',
-              fontSize: '0.78rem', fontWeight: 600, fontFamily: 'var(--font-sans)',
-              background: 'transparent',
-              color: activeTab === tab.id ? '#f59e0b' : 'var(--text-muted)',
-              borderBottom: activeTab === tab.id ? '2px solid #f59e0b' : '2px solid transparent',
-              transition: 'all 0.2s', marginBottom: '-1px'
-            }}>
-              {tab.icon} {tab.label}
-            </button>
-          ))}
         </div>
       </div>
 
-      {/* REPORT TAB */}
-      {activeTab === 'report' && (
-        <div style={{ flex: 1, overflow: 'auto', padding: '20px 32px' }}>
-          {/* Reference Selector */}
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '6px', display: 'block' }}>
-              Select a reference to generate a report
-            </label>
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <select
-                value={selectedRef?.id || ''}
-                onChange={e => {
-                  const ref = refs.find(r => r.id == e.target.value);
-                  setSelectedRef(ref || null);
-                  setGeneratedReport(null);
-                }}
-                className="input-specter"
-                style={{ flex: 1, padding: '10px 12px', fontSize: '0.78rem' }}
-              >
-                <option value="">— Select a reference —</option>
-                {refs.map(r => (
-                  <option key={r.id} value={r.id}>{r.title} ({r.year || 'N/A'})</option>
-                ))}
-              </select>
-              <button
-                onClick={() => selectedRef && generateReport(selectedRef)}
-                disabled={!selectedRef || generating}
-                className="btn-specter"
-                style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '6px' }}
-              >
-                {generating ? <><FiRefreshCw size={14} className="spin" /> Generating...</> : <><FiFileText size={14} /> Generate Report</>}
-              </button>
-            </div>
+      {/* Content */}
+      <div style={{ flex: 1, overflow: 'auto', padding: '20px 32px' }}>
+        {/* Two selectors */}
+        <div style={{ display: 'flex', gap: '16px', marginBottom: '16px' }}>
+          <RefSelector value={compareA} onChange={setCompareA} exclude={compareB} label="Paper 1" color="#f59e0b" />
+          <div style={{ display: 'flex', alignItems: 'center', paddingTop: '20px' }}>
+            <span style={{ fontSize: '1.5rem', color: 'var(--text-muted)' }}>⚡</span>
           </div>
-
-          {/* Empty state */}
-          {!generatedReport && !generating && (
-            <div className="empty-state" style={{ paddingTop: '60px' }}>
-              <FiFileText size={40} style={{ color: 'var(--text-muted)', opacity: 0.4, marginBottom: '8px' }} />
-              <div className="empty-state-title" style={{ fontSize: '1rem' }}>
-                {refs.length === 0 ? 'No references available' : 'Select a reference to analyze'}
-              </div>
-              <div className="empty-state-text" style={{ fontSize: '0.85rem', maxWidth: '340px' }}>
-                {refs.length === 0
-                  ? 'Add references to your notebooks first, then come back to generate reports.'
-                  : 'Choose a saved reference above and click "Generate Report" to get an AI-powered analysis.'
-                }
-              </div>
-            </div>
-          )}
-
-          {/* Generated Report */}
-          {generatedReport && (
-            <div className="animate-slide-down" style={{
-              background: 'var(--bg-secondary)', borderRadius: '12px',
-              border: '1px solid var(--border-color)', overflow: 'hidden'
-            }}>
-              {/* Report Header */}
-              <div style={{
-                padding: '24px', borderBottom: '1px solid var(--border-color)',
-                background: 'var(--bg-card)'
-              }}>
-                <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#f59e0b', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px' }}>
-                  Specter Research Report
-                </div>
-                <h2 style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 12px', lineHeight: 1.3 }}>
-                  {generatedReport.title}
-                </h2>
-                <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
-                  <div>
-                    <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Authors</span>
-                    <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>{generatedReport.authors}</div>
-                  </div>
-                  <div>
-                    <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Year</span>
-                    <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>{generatedReport.year}</div>
-                  </div>
-                  <div>
-                    <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Journal</span>
-                    <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>{generatedReport.journal}</div>
-                  </div>
-                  <div>
-                    <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Trust Score</span>
-                    <div style={{
-                      fontSize: '0.82rem', fontWeight: 800, color: getScoreColor(generatedReport.trustScore),
-                      background: `${getScoreColor(generatedReport.trustScore)}18`,
-                      padding: '2px 10px', borderRadius: '6px', display: 'inline-block'
-                    }}>
-                      {generatedReport.trustScore}/100
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Report Body */}
-              <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                {/* Overview */}
-                <div>
-                  <h3 style={{ fontSize: '0.82rem', fontWeight: 700, color: '#f59e0b', margin: '0 0 8px' }}>Overview</h3>
-                  <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.7, margin: 0 }}>{generatedReport.overview}</p>
-                </div>
-
-                {/* Key Findings */}
-                <div>
-                  <h3 style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 8px' }}>Key Findings</h3>
-                  <ul style={{ margin: 0, paddingLeft: '16px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    {generatedReport.keyFindings.map((f, i) => (
-                      <li key={i} style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>{f}</li>
-                    ))}
-                  </ul>
-                </div>
-
-                {/* Methodology */}
-                <div>
-                  <h3 style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 8px' }}>Methodology Notes</h3>
-                  <p style={{ fontSize: '0.78rem', color: 'var(--text-tertiary)', lineHeight: 1.6, margin: 0 }}>{generatedReport.methodology}</p>
-                </div>
-
-                {/* Limitations */}
-                <div>
-                  <h3 style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 8px' }}>Limitations & Bias</h3>
-                  <ul style={{ margin: 0, paddingLeft: '16px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    {generatedReport.limitations.map((l, i) => (
-                      <li key={i} style={{ fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>{l}</li>
-                    ))}
-                  </ul>
-                </div>
-
-                {/* Recommendation */}
-                <div style={{
-                  padding: '14px 16px', borderRadius: '8px',
-                  background: 'rgba(245, 158, 11, 0.06)', border: '1px solid rgba(245, 158, 11, 0.15)'
-                }}>
-                  <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#f59e0b' }}>📋 Recommendation</span>
-                  <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', lineHeight: 1.6, margin: '6px 0 0' }}>{generatedReport.recommendations}</p>
-                </div>
-              </div>
-            </div>
-          )}
+          <RefSelector value={compareB} onChange={setCompareB} exclude={compareA} label="Paper 2" color="#3b82f6" />
         </div>
-      )}
 
-      {/* COMPARE TAB */}
-      {activeTab === 'compare' && (
-        <div style={{ flex: 1, overflow: 'auto', padding: '20px 32px' }}>
-          {/* Two selectors */}
-          <div style={{ display: 'flex', gap: '16px', marginBottom: '16px' }}>
-            <RefSelector value={compareA} onChange={setCompareA} exclude={compareB} label="Paper 1" />
-            <div style={{ display: 'flex', alignItems: 'center', paddingTop: '20px' }}>
-              <span style={{ fontSize: '1.2rem', color: 'var(--text-muted)' }}>⚡</span>
+        <button
+          onClick={generateComparison}
+          disabled={!compareA || !compareB || generating}
+          className="btn-specter"
+          style={{ width: '100%', padding: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '20px' }}
+        >
+          {generating ? <><FiRefreshCw size={14} className="spin" /> Comparing...</> : <><FiLayers size={14} /> Compare Sources</>}
+        </button>
+
+        {!comparisonResult && !generating && (
+          <div className="empty-state" style={{ paddingTop: '40px' }}>
+            <FiLayers size={40} style={{ color: 'var(--text-muted)', opacity: 0.4, marginBottom: '8px' }} />
+            <div className="empty-state-title" style={{ fontSize: '1rem' }}>
+              {refs.length < 2 ? 'Need at least 2 references' : 'Select two papers to compare'}
             </div>
-            <RefSelector value={compareB} onChange={setCompareB} exclude={compareA} label="Paper 2" />
+            <div className="empty-state-text" style={{ fontSize: '0.85rem', maxWidth: '340px' }}>
+              Pick two references above and click "Compare Sources" for a detailed side-by-side analysis.
+            </div>
           </div>
+        )}
 
-          <button
-            onClick={generateComparison}
-            disabled={!compareA || !compareB || generating}
-            className="btn-specter"
-            style={{ width: '100%', padding: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '20px' }}
-          >
-            {generating ? <><FiRefreshCw size={14} className="spin" /> Comparing...</> : <><FiLayers size={14} /> Compare Sources</>}
-          </button>
-
-          {/* Empty state */}
-          {!comparisonResult && !generating && (
-            <div className="empty-state" style={{ paddingTop: '40px' }}>
-              <FiLayers size={40} style={{ color: 'var(--text-muted)', opacity: 0.4, marginBottom: '8px' }} />
-              <div className="empty-state-title" style={{ fontSize: '1rem' }}>
-                {refs.length < 2 ? 'Need at least 2 references' : 'Select two papers to compare'}
-              </div>
-              <div className="empty-state-text" style={{ fontSize: '0.85rem', maxWidth: '340px' }}>
-                {refs.length < 2
-                  ? 'Save at least 2 references to your notebooks to use the comparison feature.'
-                  : 'Pick two references above and click "Compare Sources" to see a side-by-side analysis.'}
-              </div>
-            </div>
-          )}
-
-          {/* Comparison Table */}
-          {comparisonResult && (
-            <div className="animate-slide-down" style={{
-              background: 'var(--bg-secondary)', borderRadius: '12px',
-              border: '1px solid var(--border-color)', overflow: 'hidden'
+        {comparisonResult && (
+          <div className="animate-slide-down">
+            {/* Overall Verdict */}
+            <div className="glass-card" style={{
+              padding: '20px', marginBottom: '16px',
+              borderLeft: `4px solid ${comparisonResult.overallVerdict.winner === 'Paper 1' ? '#f59e0b' : comparisonResult.overallVerdict.winner === 'Paper 2' ? '#3b82f6' : '#8b5cf6'}`
             }}>
-              {/* Comparison Header */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                <FiAward size={16} style={{ color: '#f59e0b' }} />
+                <span style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                  Overall: {comparisonResult.overallVerdict.winner}
+                </span>
+              </div>
+              <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0 }}>
+                {comparisonResult.overallVerdict.detail}
+              </p>
+            </div>
+
+            {/* Strengths Side by Side */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+              {[
+                { label: 'Paper 1 Strengths', items: comparisonResult.strengths.a, color: '#f59e0b' },
+                { label: 'Paper 2 Strengths', items: comparisonResult.strengths.b, color: '#3b82f6' },
+              ].map((side, i) => (
+                <div key={i} className="glass-card" style={{ padding: '14px' }}>
+                  <h4 style={{ fontSize: '0.72rem', fontWeight: 700, color: side.color, margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    {side.label}
+                  </h4>
+                  {side.items.length > 0 ? (
+                    <ul style={{ margin: 0, paddingLeft: '14px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      {side.items.map((s, j) => (
+                        <li key={j} style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                          <FiCheckCircle size={10} style={{ color: side.color, marginRight: '4px' }} />{s}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>No distinct advantages found</span>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Topic Overlap */}
+            {comparisonResult.sharedKeywords.length > 0 && (
+              <div className="glass-card" style={{ padding: '14px', marginBottom: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+                  <FiTrendingUp size={14} style={{ color: '#8b5cf6' }} />
+                  <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                    Topic Overlap: {comparisonResult.topicOverlap}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                  {comparisonResult.sharedKeywords.map((kw, i) => (
+                    <span key={i} style={{
+                      padding: '3px 10px', borderRadius: '12px', fontSize: '0.65rem',
+                      background: 'rgba(139, 92, 246, 0.1)', color: '#8b5cf6', border: '1px solid rgba(139, 92, 246, 0.2)'
+                    }}>{kw}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Comparison Table */}
+            <div className="glass-card" style={{ padding: 0, overflow: 'hidden', marginBottom: '16px' }}>
               <div style={{
-                padding: '16px 20px', background: 'var(--bg-card)',
+                padding: '14px 16px', background: 'var(--bg-card)',
                 borderBottom: '1px solid var(--border-color)',
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+                display: 'flex', alignItems: 'center', gap: '8px'
               }}>
-                <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <FiLayers size={16} style={{ color: '#f59e0b' }} /> Comparative Analysis
-                </div>
-                <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>2 papers</span>
+                <FiLayers size={15} style={{ color: '#f59e0b' }} />
+                <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary)' }}>Detailed Comparison</span>
               </div>
 
-              {/* Paper Headers */}
-              <div style={{ display: 'grid', gridTemplateColumns: '140px 1fr 1fr', borderBottom: '1px solid var(--border-color)' }}>
-                <div style={{ padding: '14px 16px', fontSize: '0.65rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Metric</div>
-                <div style={{ padding: '14px 16px', borderLeft: '1px solid var(--border-color)' }}>
-                  <span style={{ fontSize: '0.6rem', fontWeight: 700, color: '#f59e0b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Paper 1</span>
-                  <div style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-primary)', marginTop: '2px', lineHeight: 1.3 }}>{compareA?.title}</div>
-                  <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '2px' }}>{compareA?.authors} · {compareA?.year}</div>
-                </div>
-                <div style={{ padding: '14px 16px', borderLeft: '1px solid var(--border-color)' }}>
-                  <span style={{ fontSize: '0.6rem', fontWeight: 700, color: '#3b82f6', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Paper 2</span>
-                  <div style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-primary)', marginTop: '2px', lineHeight: 1.3 }}>{compareB?.title}</div>
-                  <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '2px' }}>{compareB?.authors} · {compareB?.year}</div>
-                </div>
+              {/* Header Row */}
+              <div style={{ display: 'grid', gridTemplateColumns: '130px 1fr 1fr auto', borderBottom: '1px solid var(--border-color)' }}>
+                <div style={{ padding: '10px 14px', fontSize: '0.6rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Metric</div>
+                <div style={{ padding: '10px 14px', borderLeft: '1px solid var(--border-color)', fontSize: '0.6rem', fontWeight: 700, color: '#f59e0b', textTransform: 'uppercase' }}>Paper 1</div>
+                <div style={{ padding: '10px 14px', borderLeft: '1px solid var(--border-color)', fontSize: '0.6rem', fontWeight: 700, color: '#3b82f6', textTransform: 'uppercase' }}>Paper 2</div>
+                <div style={{ padding: '10px 14px', borderLeft: '1px solid var(--border-color)', fontSize: '0.6rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', width: '180px' }}>Verdict</div>
               </div>
 
-              {/* Comparison Rows */}
               {comparisonResult.dimensions.map((dim, idx) => (
                 <div key={idx} style={{
-                  display: 'grid', gridTemplateColumns: '140px 1fr 1fr',
+                  display: 'grid', gridTemplateColumns: '130px 1fr 1fr auto',
                   borderBottom: idx < comparisonResult.dimensions.length - 1 ? '1px solid var(--border-color)' : 'none',
                   background: idx % 2 === 0 ? 'transparent' : 'var(--bg-card)'
                 }}>
-                  <div style={{
-                    padding: '12px 16px', fontSize: '0.72rem', fontWeight: 600,
-                    color: 'var(--text-secondary)', display: 'flex', alignItems: 'center'
-                  }}>
+                  <div style={{ padding: '10px 14px', fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center' }}>
                     {dim.label}
                   </div>
-                  <div style={{ padding: '12px 16px', borderLeft: '1px solid var(--border-color)', fontSize: '0.75rem', color: 'var(--text-tertiary)', lineHeight: 1.5 }}>
+                  <div style={{
+                    padding: '10px 14px', borderLeft: '1px solid var(--border-color)', fontSize: '0.72rem', color: 'var(--text-tertiary)', lineHeight: 1.5,
+                    background: dim.winner === 'a' ? 'rgba(245, 158, 11, 0.04)' : 'transparent'
+                  }}>
+                    {dim.winner === 'a' && <span style={{ color: '#f59e0b', marginRight: '4px' }}>★</span>}
                     {dim.paperA}
                   </div>
-                  <div style={{ padding: '12px 16px', borderLeft: '1px solid var(--border-color)', fontSize: '0.75rem', color: 'var(--text-tertiary)', lineHeight: 1.5 }}>
+                  <div style={{
+                    padding: '10px 14px', borderLeft: '1px solid var(--border-color)', fontSize: '0.72rem', color: 'var(--text-tertiary)', lineHeight: 1.5,
+                    background: dim.winner === 'b' ? 'rgba(59, 130, 246, 0.04)' : 'transparent'
+                  }}>
+                    {dim.winner === 'b' && <span style={{ color: '#3b82f6', marginRight: '4px' }}>★</span>}
                     {dim.paperB}
+                  </div>
+                  <div style={{ padding: '10px 14px', borderLeft: '1px solid var(--border-color)', fontSize: '0.68rem', color: 'var(--text-muted)', lineHeight: 1.4, width: '180px' }}>
+                    {dim.verdict}
                   </div>
                 </div>
               ))}
+            </div>
 
-              {/* Summary */}
-              <div style={{
-                padding: '16px 20px', borderTop: '1px solid var(--border-color)',
-                background: 'rgba(245, 158, 11, 0.04)'
-              }}>
-                <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#f59e0b', marginBottom: '6px' }}>📊 Summary</div>
-                <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0 }}>
-                  {comparisonResult.summary}
+            {/* Summary & Use Case */}
+            <div className="glass-card" style={{ padding: '16px', marginBottom: '16px' }}>
+              <h4 style={{ fontSize: '0.78rem', fontWeight: 700, color: '#f59e0b', margin: '0 0 6px' }}>📊 Summary</h4>
+              <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', lineHeight: 1.7, margin: '0 0 12px' }}>
+                {comparisonResult.summary}
+              </p>
+              <div style={{ padding: '10px 14px', borderRadius: '8px', background: 'rgba(74, 222, 128, 0.05)', border: '1px solid rgba(74, 222, 128, 0.12)' }}>
+                <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#4ade80' }}>📋 Recommendation</span>
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: 1.6, margin: '4px 0 0' }}>
+                  {comparisonResult.useCase}
                 </p>
               </div>
             </div>
-          )}
-        </div>
-      )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

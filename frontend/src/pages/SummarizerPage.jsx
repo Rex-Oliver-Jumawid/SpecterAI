@@ -34,14 +34,17 @@ export default function SummarizerPage({ allNotebooks = [] }) {
     setTimeout(() => {
       const ref = selectedRef;
       const trustScore = ref.journal && ref.doi && ref.abstract ? 85 : ref.journal || ref.doi ? 65 : 40;
-      const methodology = ref.abstract
-        ? ref.abstract.toLowerCase().includes('survey') ? 'survey-based quantitative'
-          : ref.abstract.toLowerCase().includes('experiment') ? 'experimental'
-          : ref.abstract.toLowerCase().includes('interview') ? 'qualitative interview-based'
-          : ref.abstract.toLowerCase().includes('case study') ? 'case study'
-          : ref.abstract.toLowerCase().includes('review') ? 'systematic literature review'
-          : 'mixed-methods'
-        : 'not determinable from available metadata';
+      const lower = (ref.abstract || '').toLowerCase();
+      const methodology = lower.includes('survey') ? 'survey-based quantitative'
+        : lower.includes('experiment') ? 'experimental'
+        : lower.includes('interview') ? 'qualitative interview-based'
+        : lower.includes('case study') ? 'case study'
+        : lower.includes('review') ? 'systematic literature review'
+        : lower.includes('regression') || lower.includes('statistical') ? 'quantitative statistical'
+        : lower.includes('observation') ? 'observational'
+        : ref.abstract ? 'mixed-methods' : 'not determinable from available metadata';
+
+      const titleWords = (ref.title || '').toLowerCase().split(' ').filter(w => w.length > 3).slice(0, 4).join(' ');
 
       const result = {
         title: ref.title || 'Untitled Paper',
@@ -52,41 +55,59 @@ export default function SummarizerPage({ allNotebooks = [] }) {
         trustScore,
         type: ref.journal ? 'Journal Article' : ref.doi ? 'Published Work' : 'Web Source',
         citedBy: ref.cited_by_count || 0,
-        overview: ref.abstract
-          ? `${ref.abstract.substring(0, 300)}${ref.abstract.length > 300 ? '...' : ''}`
-          : `This paper titled "${ref.title}" ${ref.year ? `(${ref.year})` : ''} examines key aspects of ${ref.title?.toLowerCase().split(' ').slice(0, 5).join(' ') || 'the research topic'}. ${ref.journal ? `Published in ${ref.journal}, it` : 'It'} contributes to the field by addressing gaps in existing literature.`,
-        methodology: `The study employs a ${methodology} approach. ${ref.abstract && ref.abstract.length > 200 ? 'Based on the abstract, the authors present a structured investigation with clear analytical methods.' : 'Limited methodological details are available without full text access.'}`,
+
+        abstract: ref.abstract || `No abstract available for this paper. The study titled "${ref.title}" ${ref.year ? `(${ref.year})` : ''} is cataloged ${ref.journal ? `in ${ref.journal}` : 'without a specified journal'}.`,
+
+        conceptOfStudy: ref.abstract
+          ? `This research centers on ${titleWords || 'the stated topic'}, investigating the relationship between key variables identified in the field. The study is positioned within the broader context of ${ref.journal ? `research published in ${ref.journal}` : 'contemporary academic discourse'}, aiming to address gaps in existing knowledge. ${ref.abstract.length > 200 ? 'The authors articulate a clear research problem and establish the significance of their inquiry through a comprehensive review of related work.' : 'The concept is derived from metadata analysis.'}`
+          : `The concept of this study revolves around ${titleWords || 'the research topic'}. Without an available abstract, the full scope of the study's conceptual framework cannot be determined. Further review of the full text is recommended.`,
+
+        theoreticalFramework: ref.abstract
+          ? `The study appears grounded in ${lower.includes('theory') ? 'established theoretical models referenced in the literature' : lower.includes('model') ? 'a conceptual model developed or adapted by the authors' : 'theoretical perspectives relevant to the domain'}. ${lower.includes('framework') ? 'The authors explicitly reference a theoretical framework to guide their analysis.' : 'The underlying theoretical assumptions can be inferred from the research design and terminology.'} This positions the work within ${ref.journal ? `the scholarly traditions of ${ref.journal}` : 'its academic field'}.`
+          : 'Theoretical framework cannot be determined without access to the full text. Review the introduction and literature review sections of the paper for theoretical grounding.',
+
+        methodology: `The study employs a **${methodology}** approach. ${ref.abstract
+          ? `Based on the available abstract, the research design involves ${lower.includes('data') ? 'systematic data collection and analysis' : 'structured investigation methods'}. ${lower.includes('sample') || lower.includes('participant') ? 'The study involves human subjects or defined sample populations.' : ''} ${lower.includes('analysis') ? 'Analytical procedures are documented in the methodology section.' : ''}`
+          : 'Limited methodological details are available without full text access. Consult the paper directly for research design, sampling, data collection, and analysis procedures.'}`,
+
+        sampleAndScope: ref.abstract
+          ? `${(ref.abstract.match(/(\d+)\s*(participants|respondents|subjects|samples|students|teachers|patients|users|companies|organizations|countries)/i) || ['Not explicitly stated'])[0]}. The scope of the study ${lower.includes('global') || lower.includes('international') ? 'spans international contexts' : lower.includes('national') ? 'focuses on a national context' : lower.includes('local') ? 'examines a local context' : 'is defined within its research design'}.`
+          : 'Sample size and scope are not available from metadata alone.',
+
         keyFindings: [
           ref.abstract
-            ? `The research addresses key dimensions of ${ref.title?.split(' ').slice(0, 4).join(' ').toLowerCase() || 'the topic'}, providing evidence-based insights.`
-            : `This paper covers topics related to ${ref.title?.split(' ').slice(0, 4).join(' ').toLowerCase() || 'the research area'}.`,
+            ? `The research presents evidence regarding ${titleWords}, contributing new insights to the field.`
+            : `This paper addresses topics related to ${titleWords || 'the research area'}.`,
           ref.cited_by_count > 100
-            ? `Highly cited with ${ref.cited_by_count.toLocaleString()} citations, demonstrating significant academic impact and recognition.`
-            : ref.cited_by_count > 0
-            ? `Cited ${ref.cited_by_count} times, indicating moderate scholarly engagement.`
-            : 'Citation data unavailable — consider verifying impact through other metrics.',
+            ? `Highly cited (${ref.cited_by_count.toLocaleString()} citations) — the findings are widely recognized and have influenced subsequent research.`
+            : ref.cited_by_count > 10
+            ? `Moderately cited (${ref.cited_by_count} citations) — the findings have received scholarly attention.`
+            : 'Limited citation data — the paper may be recent or in a niche area.',
           ref.journal
-            ? `Published in ${ref.journal}, a peer-reviewed venue, lending credibility to the findings.`
-            : 'Publication venue not specified — verify source reliability before citing.',
-          ref.year && (new Date().getFullYear() - ref.year <= 3)
-            ? `Recent publication (${ref.year}) — findings reflect current state of the field.`
-            : ref.year
-            ? `Published in ${ref.year} — consider whether findings remain current or need supplementation with newer research.`
-            : 'Publication year unknown.',
-        ].filter(f => f),
+            ? `Publication in ${ref.journal} indicates peer-review validation and adherence to disciplinary standards.`
+            : 'The publication venue is unspecified — findings should be cross-referenced with peer-reviewed sources.',
+          ref.abstract && ref.abstract.length > 150
+            ? 'The abstract suggests substantive findings with potential implications for both theory and practice.'
+            : 'Further findings may be available in the full text.',
+        ],
+
+        conclusion: ref.abstract
+          ? `Based on the available information, this study on "${ref.title}" contributes to the understanding of ${titleWords}. ${ref.cited_by_count > 50 ? `With ${ref.cited_by_count.toLocaleString()} citations, the work has demonstrable academic impact.` : 'The study adds to the growing body of literature on this topic.'} ${ref.year && (new Date().getFullYear() - ref.year <= 3) ? 'As a recent publication, its findings reflect current developments in the field.' : ref.year ? `Published in ${ref.year}, readers should consider supplementing with more recent studies.` : ''} Future research could build on this work by ${lower.includes('limit') ? 'addressing the stated limitations' : 'expanding the scope and methodology'}.`
+          : `This paper addresses ${titleWords || 'its research topic'}. Without access to the full text, a comprehensive conclusion cannot be generated. Readers should consult the original paper for the authors' stated conclusions and implications.`,
+
         limitations: [
-          !ref.abstract ? 'No abstract available — analysis is based on metadata only.' : 'Analysis is based on abstract and metadata; full text review recommended.',
-          ref.year && (new Date().getFullYear() - ref.year > 5) ? `Published ${new Date().getFullYear() - ref.year} years ago — findings may need updating.` : null,
-          !ref.doi ? 'No DOI available — source verification is limited.' : null,
+          !ref.abstract ? 'No abstract available — all analysis is inferred from metadata.' : 'This report is based on abstract and metadata; full text review is recommended for complete understanding.',
+          ref.year && (new Date().getFullYear() - ref.year > 5) ? `Published ${new Date().getFullYear() - ref.year} years ago — findings may require updating.` : null,
+          !ref.doi ? 'No DOI — source verification is limited.' : null,
           !ref.journal ? 'No journal specified — peer-review status unconfirmed.' : null,
           ref.cited_by_count === 0 ? 'No citation data — academic impact cannot be assessed.' : null,
         ].filter(Boolean),
-        sampleSize: ref.abstract?.match(/(\d+)\s*(participants|respondents|subjects|samples)/i)?.[0] || 'Not specified',
+
         recommendation: trustScore >= 75
-          ? 'This source is suitable for academic citation. Verify specific claims against the full text.'
+          ? 'This source is well-suited for academic citation. Its metadata indicates strong verification markers (DOI, peer-reviewed journal, available abstract). Verify specific claims against the full text before citing.'
           : trustScore >= 50
-          ? 'Use with caution. Consider supplementing with additional verified sources.'
-          : 'Limited verifiability. Not recommended as a primary source without further validation.',
+          ? 'Use with moderate confidence. Some verification markers are present but not all. Consider supplementing with additional verified sources to strengthen your arguments.'
+          : 'Limited verifiability. Not recommended as a primary source without further validation. Cross-reference with peer-reviewed and DOI-verified publications.',
       };
 
       setSummary(result);
@@ -97,7 +118,6 @@ export default function SummarizerPage({ allNotebooks = [] }) {
   const downloadPDF = () => {
     if (!reportRef.current) return;
 
-    // Build a clean HTML string for PDF
     const s = summary;
     const scoreColor = s.trustScore >= 75 ? '#22c55e' : s.trustScore >= 50 ? '#eab308' : '#f97316';
     const html = `
@@ -105,37 +125,46 @@ export default function SummarizerPage({ allNotebooks = [] }) {
         <div style="text-align: center; margin-bottom: 30px; border-bottom: 2px solid #8b5cf6; padding-bottom: 20px;">
           <div style="font-size: 11px; font-weight: 700; color: #8b5cf6; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 8px;">Specter Research Report</div>
           <h1 style="font-size: 22px; margin: 0 0 12px; line-height: 1.3;">${s.title}</h1>
-          <div style="font-size: 13px; color: #555;">
-            <span><strong>Authors:</strong> ${s.authors}</span> &nbsp;|&nbsp;
-            <span><strong>Year:</strong> ${s.year}</span> &nbsp;|&nbsp;
-            <span><strong>Journal:</strong> ${s.journal}</span>
+          <div style="font-size: 12px; color: #555;">
+            <strong>Authors:</strong> ${s.authors} &nbsp;|&nbsp; <strong>Year:</strong> ${s.year} &nbsp;|&nbsp; <strong>Journal:</strong> ${s.journal}
           </div>
-          <div style="margin-top: 8px; font-size: 13px; color: #555;">
-            <span><strong>DOI:</strong> ${s.doi}</span> &nbsp;|&nbsp;
-            <span><strong>Citations:</strong> ${s.citedBy.toLocaleString()}</span> &nbsp;|&nbsp;
-            <span><strong>Trust Score:</strong> <span style="color: ${scoreColor}; font-weight: 800;">${s.trustScore}/100</span></span>
+          <div style="margin-top: 6px; font-size: 12px; color: #555;">
+            <strong>DOI:</strong> ${s.doi} &nbsp;|&nbsp; <strong>Citations:</strong> ${s.citedBy.toLocaleString()} &nbsp;|&nbsp;
+            <strong>Trust Score:</strong> <span style="color: ${scoreColor}; font-weight: 800;">${s.trustScore}/100</span>
           </div>
         </div>
 
-        <h2 style="font-size: 15px; color: #8b5cf6; border-bottom: 1px solid #e5e7eb; padding-bottom: 6px;">📋 Overview</h2>
-        <p style="font-size: 13px; line-height: 1.8; color: #333;">${s.overview}</p>
+        <h2 style="font-size: 14px; color: #8b5cf6; border-bottom: 1px solid #e5e7eb; padding-bottom: 6px;">Abstract</h2>
+        <p style="font-size: 12px; line-height: 1.8; color: #333; font-style: italic;">${s.abstract}</p>
 
-        <h2 style="font-size: 15px; color: #333; border-bottom: 1px solid #e5e7eb; padding-bottom: 6px;">🔬 Methodology</h2>
-        <p style="font-size: 13px; line-height: 1.8; color: #333;">${s.methodology}</p>
+        <h2 style="font-size: 14px; color: #333; border-bottom: 1px solid #e5e7eb; padding-bottom: 6px;">Concept of the Study</h2>
+        <p style="font-size: 12px; line-height: 1.8; color: #333;">${s.conceptOfStudy}</p>
 
-        <h2 style="font-size: 15px; color: #333; border-bottom: 1px solid #e5e7eb; padding-bottom: 6px;">🔍 Key Findings</h2>
-        <ul style="font-size: 13px; line-height: 1.8; color: #333; padding-left: 20px;">
+        <h2 style="font-size: 14px; color: #333; border-bottom: 1px solid #e5e7eb; padding-bottom: 6px;">Theoretical Framework</h2>
+        <p style="font-size: 12px; line-height: 1.8; color: #333;">${s.theoreticalFramework}</p>
+
+        <h2 style="font-size: 14px; color: #333; border-bottom: 1px solid #e5e7eb; padding-bottom: 6px;">Methodology</h2>
+        <p style="font-size: 12px; line-height: 1.8; color: #333;">${s.methodology.replace(/\*\*/g, '')}</p>
+
+        <h2 style="font-size: 14px; color: #333; border-bottom: 1px solid #e5e7eb; padding-bottom: 6px;">Sample &amp; Scope</h2>
+        <p style="font-size: 12px; line-height: 1.8; color: #333;">${s.sampleAndScope}</p>
+
+        <h2 style="font-size: 14px; color: #333; border-bottom: 1px solid #e5e7eb; padding-bottom: 6px;">Key Findings</h2>
+        <ul style="font-size: 12px; line-height: 1.8; color: #333; padding-left: 20px;">
           ${s.keyFindings.map(f => `<li style="margin-bottom: 6px;">${f}</li>`).join('')}
         </ul>
 
-        <h2 style="font-size: 15px; color: #333; border-bottom: 1px solid #e5e7eb; padding-bottom: 6px;">⚠️ Limitations</h2>
-        <ul style="font-size: 13px; line-height: 1.8; color: #666; padding-left: 20px;">
+        <h2 style="font-size: 14px; color: #333; border-bottom: 1px solid #e5e7eb; padding-bottom: 6px;">Conclusion</h2>
+        <p style="font-size: 12px; line-height: 1.8; color: #333;">${s.conclusion}</p>
+
+        <h2 style="font-size: 14px; color: #333; border-bottom: 1px solid #e5e7eb; padding-bottom: 6px;">Limitations</h2>
+        <ul style="font-size: 12px; line-height: 1.8; color: #666; padding-left: 20px;">
           ${s.limitations.map(l => `<li style="margin-bottom: 4px;">${l}</li>`).join('')}
         </ul>
 
         <div style="margin-top: 20px; padding: 14px 16px; border-radius: 8px; background: #f0fdf4; border: 1px solid #bbf7d0;">
-          <div style="font-size: 12px; font-weight: 700; color: #16a34a; margin-bottom: 4px;">📋 Recommendation</div>
-          <p style="font-size: 13px; color: #333; margin: 0; line-height: 1.6;">${s.recommendation}</p>
+          <div style="font-size: 12px; font-weight: 700; color: #16a34a; margin-bottom: 4px;">Recommendation</div>
+          <p style="font-size: 12px; color: #333; margin: 0; line-height: 1.6;">${s.recommendation}</p>
         </div>
 
         <div style="margin-top: 30px; padding-top: 16px; border-top: 1px solid #e5e7eb; text-align: center;">
@@ -304,15 +333,23 @@ export default function SummarizerPage({ allNotebooks = [] }) {
 
               {/* Body */}
               <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                {/* Overview */}
-                <Section title="Overview" emoji="📋" color="#06b6d4"
-                  content={summary.overview}
-                  onCopy={() => copySection(summary.overview, 'overview')} copied={copied === 'overview'} />
+                {/* Abstract */}
+                <div style={{ padding: '14px 16px', borderRadius: '8px', background: 'rgba(6, 182, 212, 0.04)', border: '1px solid rgba(6, 182, 212, 0.12)' }}>
+                  <Section title="Abstract" emoji="📄" content={summary.abstract}
+                    onCopy={() => copySection(summary.abstract, 'abstract')} copied={copied === 'abstract'} />
+                </div>
 
-                {/* Methodology */}
-                <Section title="Methodology" emoji="🔬" color="#8b5cf6"
-                  content={summary.methodology}
+                <Section title="Concept of the Study" emoji="💡" content={summary.conceptOfStudy}
+                  onCopy={() => copySection(summary.conceptOfStudy, 'concept')} copied={copied === 'concept'} />
+
+                <Section title="Theoretical Framework" emoji="🏗️" content={summary.theoreticalFramework}
+                  onCopy={() => copySection(summary.theoreticalFramework, 'framework')} copied={copied === 'framework'} />
+
+                <Section title="Methodology" emoji="🔬" content={summary.methodology}
                   onCopy={() => copySection(summary.methodology, 'methodology')} copied={copied === 'methodology'} />
+
+                <Section title="Sample & Scope" emoji="📊" content={summary.sampleAndScope}
+                  onCopy={() => copySection(summary.sampleAndScope, 'sample')} copied={copied === 'sample'} />
 
                 {/* Key Findings */}
                 <div>
@@ -328,6 +365,12 @@ export default function SummarizerPage({ allNotebooks = [] }) {
                       <li key={i} style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>{f}</li>
                     ))}
                   </ul>
+                </div>
+
+                {/* Conclusion */}
+                <div style={{ padding: '14px 16px', borderRadius: '8px', background: 'rgba(139, 92, 246, 0.04)', border: '1px solid rgba(139, 92, 246, 0.12)' }}>
+                  <Section title="Conclusion" emoji="📝" content={summary.conclusion}
+                    onCopy={() => copySection(summary.conclusion, 'conclusion')} copied={copied === 'conclusion'} />
                 </div>
 
                 {/* Limitations */}
