@@ -737,7 +737,7 @@ function AppShell() {
               allNotebooks={allNotebooks} />
           } />
           <Route path="/comparison" element={
-            <ComparisonPage allNotebooks={allNotebooks} allReferences={refs} />
+            <ComparisonPage allNotebooks={allNotebooks} />
           } />
           <Route path="*" element={
             <NotebooksPage allNotebooks={allNotebooks}

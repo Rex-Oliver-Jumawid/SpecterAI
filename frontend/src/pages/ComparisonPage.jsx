@@ -1,7 +1,8 @@
-import React, { useState, useMemo } from 'react';
-import { FiFileText, FiChevronDown, FiChevronRight, FiLayers, FiX, FiDownload, FiRefreshCw } from 'react-icons/fi';
+import React, { useState, useMemo, useEffect } from 'react';
+import { FiFileText, FiChevronDown, FiChevronRight, FiLayers, FiX, FiDownload, FiRefreshCw, FiBookOpen } from 'react-icons/fi';
+import { references as refsApi } from '../api';
 
-export default function ComparisonPage({ allNotebooks = [], allReferences = [] }) {
+export default function ComparisonPage({ allNotebooks = [] }) {
   const [activeTab, setActiveTab] = useState('report');
   const [selectedRef, setSelectedRef] = useState(null);
   const [compareA, setCompareA] = useState(null);
@@ -10,12 +11,24 @@ export default function ComparisonPage({ allNotebooks = [], allReferences = [] }
   const [comparisonResult, setComparisonResult] = useState(null);
   const [generating, setGenerating] = useState(false);
 
-  // Collect all refs from all notebooks
-  const refs = useMemo(() => {
-    if (allReferences && allReferences.length > 0) return allReferences;
-    // Fallback: flatten refs from notebooks if passed differently
-    return [];
-  }, [allReferences]);
+  // Notebook-based reference loading
+  const [selectedNotebookId, setSelectedNotebookId] = useState('');
+  const [refs, setRefs] = useState([]);
+  const [loadingRefs, setLoadingRefs] = useState(false);
+
+  useEffect(() => {
+    if (!selectedNotebookId) { setRefs([]); return; }
+    setLoadingRefs(true);
+    setSelectedRef(null);
+    setCompareA(null);
+    setCompareB(null);
+    setGeneratedReport(null);
+    setComparisonResult(null);
+    refsApi.list(selectedNotebookId)
+      .then(data => setRefs(data))
+      .catch(() => setRefs([]))
+      .finally(() => setLoadingRefs(false));
+  }, [selectedNotebookId]);
 
   // Generate a structured report for a single reference
   const generateReport = (ref) => {
@@ -172,6 +185,28 @@ export default function ComparisonPage({ allNotebooks = [], allReferences = [] }
               Generate reports & compare your saved references side-by-side
             </p>
           </div>
+        </div>
+
+        {/* Notebook Selector */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+          <FiBookOpen size={15} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+          <select
+            value={selectedNotebookId}
+            onChange={e => setSelectedNotebookId(e.target.value)}
+            className="input-specter"
+            style={{ flex: 1, maxWidth: '400px', padding: '8px 12px', fontSize: '0.78rem' }}
+          >
+            <option value="">— Select a notebook —</option>
+            {allNotebooks.map(nb => (
+              <option key={nb.id} value={nb.id}>{nb.title || 'Untitled'}</option>
+            ))}
+          </select>
+          {loadingRefs && <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Loading refs...</span>}
+          {selectedNotebookId && !loadingRefs && (
+            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+              {refs.length} reference{refs.length !== 1 ? 's' : ''} found
+            </span>
+          )}
         </div>
 
         {/* Tabs */}
