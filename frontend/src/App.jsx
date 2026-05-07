@@ -12,6 +12,9 @@ import CalendarPage from './pages/CalendarPage';
 import ReferencesPage from './pages/ReferencesPage';
 import NotebooksPage from './pages/NotebooksPage';
 import ComparisonPage from './pages/ComparisonPage';
+import DashboardPage from './pages/DashboardPage';
+import AIDetectionPage from './pages/AIDetectionPage';
+import TemplatesPage from './pages/TemplatesPage';
 import { notebooks, references as refsApi, plans as plansApi, chat as chatApi, BASE as API_BASE } from './api';
 import { FiFileText, FiCheckSquare, FiBookOpen, FiMessageSquare, FiX, FiAlertCircle, FiCheck, FiRotateCcw, FiChevronDown, FiChevronRight } from 'react-icons/fi';
 import './App.css';
@@ -645,6 +648,20 @@ function AppShell() {
     }
   };
 
+  // Create notebook from template
+  const handleCreateFromTemplate = async (title, content) => {
+    try {
+      const nb = await notebooks.create(title);
+      await notebooks.update(nb.id, { content });
+      const full = { ...nb, content };
+      setAllNotebooks(prev => [...prev, full]);
+      return nb.id;
+    } catch (e) {
+      console.error('Template creation failed:', e);
+      return null;
+    }
+  };
+
   // Save reference to a specific notebook (used by ReferencesPage Discover tab)
   const handleAddReferenceToNotebook = async (nbId, data) => {
     try {
@@ -738,6 +755,15 @@ function AppShell() {
           } />
           <Route path="/comparison" element={
             <ComparisonPage allNotebooks={allNotebooks} />
+          } />
+          <Route path="/dashboard" element={
+            <DashboardPage allNotebooks={allNotebooks} />
+          } />
+          <Route path="/ai-detection" element={
+            <AIDetectionPage allNotebooks={allNotebooks} />
+          } />
+          <Route path="/templates" element={
+            <TemplatesPage onCreateFromTemplate={handleCreateFromTemplate} />
           } />
           <Route path="*" element={
             <NotebooksPage allNotebooks={allNotebooks}

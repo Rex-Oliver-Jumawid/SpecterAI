@@ -34,7 +34,7 @@ export default function ComparisonPage({ allNotebooks = [] }) {
   const generateReport = (ref) => {
     setGenerating(true);
     setSelectedRef(ref);
-    
+
     // Simulated AI report
     setTimeout(() => {
       const report = {
@@ -50,7 +50,7 @@ export default function ComparisonPage({ allNotebooks = [] }) {
           ref.cited_by_count > 50 ? `Widely cited with ${ref.cited_by_count.toLocaleString()} citations, indicating significant academic impact.` : 'Limited citation data available.',
           ref.journal ? `Published in ${ref.journal}, a peer-reviewed venue.` : 'Publication venue not verified.',
         ],
-        methodology: ref.abstract 
+        methodology: ref.abstract
           ? `Based on the abstract, this paper appears to employ a ${ref.abstract.toLowerCase().includes('survey') ? 'survey-based' : ref.abstract.toLowerCase().includes('experiment') ? 'experimental' : ref.abstract.toLowerCase().includes('case study') ? 'case study' : 'mixed-methods'} approach.`
           : 'Methodology cannot be determined without access to the full text.',
         limitations: [
@@ -58,7 +58,7 @@ export default function ComparisonPage({ allNotebooks = [] }) {
           ref.year && (new Date().getFullYear() - ref.year > 5) ? `Published ${new Date().getFullYear() - ref.year} years ago — findings may need updating.` : null,
           !ref.doi ? 'No DOI available — source verification is limited.' : null,
         ].filter(Boolean),
-        recommendations: ref.journal && ref.doi 
+        recommendations: ref.journal && ref.doi
           ? 'This source is suitable for academic citation. Verify relevance to your specific research question.'
           : 'Consider supplementing with additional verified sources for stronger arguments.',
       };
@@ -117,9 +117,8 @@ export default function ComparisonPage({ allNotebooks = [] }) {
             verdict: 'Review focus areas for topical relevance to your research'
           },
         ],
-        summary: `Comparing "${compareA.title}" (${yearA}) with "${compareB.title}" (${yearB}). ${
-          citesA + citesB > 100 ? 'Both papers have significant academic recognition.' : 'Consider the recency and verification status of each source.'
-        } ${compareA.doi && compareB.doi ? 'Both are DOI-verified, indicating reliable provenance.' : 'Verify source authenticity before citing.'}`
+        summary: `Comparing "${compareA.title}" (${yearA}) with "${compareB.title}" (${yearB}). ${citesA + citesB > 100 ? 'Both papers have significant academic recognition.' : 'Consider the recency and verification status of each source.'
+          } ${compareA.doi && compareB.doi ? 'Both are DOI-verified, indicating reliable provenance.' : 'Verify source authenticity before citing.'}`
       };
       setComparisonResult(comparison);
       setGenerating(false);
@@ -196,7 +195,7 @@ export default function ComparisonPage({ allNotebooks = [] }) {
             className="input-specter"
             style={{ flex: 1, maxWidth: '400px', padding: '8px 12px', fontSize: '0.78rem' }}
           >
-            <option value="">— Select a notebook —</option>
+            <option value=""> Select a notebook </option>
             {allNotebooks.map(nb => (
               <option key={nb.id} value={nb.id}>{nb.title || 'Untitled'}</option>
             ))}
@@ -212,7 +211,7 @@ export default function ComparisonPage({ allNotebooks = [] }) {
         {/* Tabs */}
         <div style={{ display: 'flex', gap: '0', borderBottom: '1px solid var(--border-color)' }}>
           {[{ id: 'report', label: 'Generate Report', icon: <FiFileText size={13} /> },
-            { id: 'compare', label: 'Compare Sources', icon: <FiLayers size={13} /> }].map(tab => (
+          { id: 'compare', label: 'Compare Sources', icon: <FiLayers size={13} /> }].map(tab => (
             <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{
               display: 'flex', alignItems: 'center', gap: '6px',
               padding: '10px 20px', border: 'none', cursor: 'pointer',
@@ -271,7 +270,7 @@ export default function ComparisonPage({ allNotebooks = [] }) {
                 {refs.length === 0 ? 'No references available' : 'Select a reference to analyze'}
               </div>
               <div className="empty-state-text" style={{ fontSize: '0.85rem', maxWidth: '340px' }}>
-                {refs.length === 0 
+                {refs.length === 0
                   ? 'Add references to your notebooks first, then come back to generate reports.'
                   : 'Choose a saved reference above and click "Generate Report" to get an AI-powered analysis.'
                 }

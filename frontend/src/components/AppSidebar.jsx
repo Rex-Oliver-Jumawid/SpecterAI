@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { FiCalendar, FiSearch, FiSun, FiMoon, FiBookOpen, FiLayers } from 'react-icons/fi';
+import { FiCalendar, FiSearch, FiSun, FiMoon, FiBookOpen, FiLayers, FiBarChart2, FiShield, FiGrid } from 'react-icons/fi';
 import SpecterLogo from './SpecterLogo';
 
 export default function AppSidebar({ darkMode, onToggleTheme }) {
@@ -8,9 +8,12 @@ export default function AppSidebar({ darkMode, onToggleTheme }) {
 
   const navItems = [
     { to: '/notebooks', icon: <FiBookOpen size={17} />, label: 'Notebooks' },
+    { to: '/dashboard', icon: <FiBarChart2 size={17} />, label: 'Dashboard' },
     { to: '/calendar', icon: <FiCalendar size={17} />, label: 'Calendar' },
     { to: '/references', icon: <FiSearch size={17} />, label: 'References' },
     { to: '/comparison', icon: <FiLayers size={17} />, label: 'Comparison' },
+    { to: '/ai-detection', icon: <FiShield size={17} />, label: 'AI Detection' },
+    { to: '/templates', icon: <FiGrid size={17} />, label: 'Templates' },
   ];
 
   return (

@@ -71,8 +71,8 @@ export default function ReferencesPage({ references, onAddReference, onAddRefere
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
     return (r.title || '').toLowerCase().includes(q) ||
-           (r.authors || '').toLowerCase().includes(q) ||
-           (r.journal || '').toLowerCase().includes(q);
+      (r.authors || '').toLowerCase().includes(q) ||
+      (r.journal || '').toLowerCase().includes(q);
   });
 
   const getConfBadge = (ref) => {
@@ -93,7 +93,7 @@ export default function ReferencesPage({ references, onAddReference, onAddRefere
   const getScoreExplanation = (ref) => {
     const factors = [];
     let score = ref.relevance_score || 0;
-    
+
     // Citation impact
     if (ref.cited_by_count > 100) {
       factors.push({ label: 'High citation count', detail: `${ref.cited_by_count.toLocaleString()} citations — widely recognized`, impact: '+', color: '#4ade80' });
@@ -173,7 +173,7 @@ export default function ReferencesPage({ references, onAddReference, onAddRefere
         {/* Tabs */}
         <div style={{ display: 'flex', gap: '0', borderBottom: '1px solid var(--border-color)' }}>
           {[{ id: 'library', label: 'My Library', icon: <FiBookOpen size={13} /> },
-            { id: 'search', label: 'Discover', icon: <FiSearch size={13} /> }].map(tab => (
+          { id: 'search', label: 'Discover', icon: <FiSearch size={13} /> }].map(tab => (
             <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{
               display: 'flex', alignItems: 'center', gap: '6px',
               padding: '10px 20px', border: 'none', cursor: 'pointer',
@@ -313,7 +313,7 @@ export default function ReferencesPage({ references, onAddReference, onAddRefere
                 className="input-specter"
                 style={{ flex: 1, maxWidth: '300px', padding: '6px 10px', fontSize: '0.75rem' }}
               >
-                <option value="">— Select a notebook —</option>
+                <option value=""> Select a notebook </option>
                 {allNotebooks.map(nb => (
                   <option key={nb.id} value={nb.id}>{nb.title || 'Untitled'}</option>
                 ))}
