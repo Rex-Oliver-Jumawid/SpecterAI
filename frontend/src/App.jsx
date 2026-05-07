@@ -505,6 +505,7 @@ function AppShell() {
 
   const loadNotebookById = async (nbId) => {
     setNotebookError(null);
+    setCitedRefIds([]); // Reset cited refs for new notebook
     try {
       const nb = await notebooks.get(nbId);
       setNotebook(nb);
