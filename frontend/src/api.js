@@ -1,4 +1,4 @@
-export let BASE = import.meta.env.VITE_API_URL || '/api';
+export let BASE = import.meta.env.VITE_API_URL || (window.location.hostname.includes('frontend') ? 'https://specter-ai-taupe.vercel.app/api' : '/api');
 if (BASE.endsWith('/')) BASE = BASE.slice(0, -1);
 
 async function request(path, options = {}) {
