@@ -686,12 +686,20 @@ function AppShell() {
   };
 
   // Create notebook from template
-  const handleCreateFromTemplate = async (title, content) => {
+  const handleCreateFromTemplate = async (templateTitle, templateContent) => {
     try {
-      const nb = await notebooks.create(title);
-      await notebooks.update(nb.id, { content });
-      const full = { ...nb, content };
+      const nb = await notebooks.create(templateTitle);
+      await notebooks.update(nb.id, { content: templateContent });
+      const full = { ...nb, content: templateContent, title: templateTitle };
       setAllNotebooks(prev => [...prev, full]);
+      // Immediately set state so the notebook page shows the template content
+      setNotebook(full);
+      setContent(templateContent);
+      setTitle(templateTitle);
+      setRefs([]);
+      setPlanList([]);
+      setChatHistory([]);
+      setCitedRefIds([]);
       return nb.id;
     } catch (e) {
       console.error('Template creation failed:', e);
