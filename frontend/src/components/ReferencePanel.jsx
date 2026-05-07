@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { FiTrash2, FiChevronDown, FiChevronRight, FiChevronsRight } from 'react-icons/fi';
+import { FiTrash2, FiChevronDown, FiChevronRight, FiChevronsRight, FiSearch } from 'react-icons/fi';
+import { useNavigate } from 'react-router-dom';
 
 export default function ReferencePanel({ references, onAddReference, onDeleteReference, onInsertCitation, onCollapse }) {
   const [newRefUrl, setNewRefUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [expandedRef, setExpandedRef] = useState(null);
+  const navigate = useNavigate();
 
   const handleAddReference = async () => {
     if (newRefUrl.trim()) {
@@ -62,6 +64,18 @@ export default function ReferencePanel({ references, onAddReference, onDeleteRef
             <div className="empty-state-icon">📄</div>
             <div className="empty-state-title">No references yet</div>
             <div className="empty-state-text">Paste a URL or DOI above to add your first reference.</div>
+            <button
+              onClick={() => navigate('/references')}
+              style={{
+                marginTop: '12px', display: 'flex', alignItems: 'center', gap: '6px',
+                padding: '8px 16px', borderRadius: '8px', border: 'none',
+                background: 'linear-gradient(135deg, #7c3aed, #4f46e5)',
+                color: 'white', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600,
+                fontFamily: 'var(--font-sans)', margin: '12px auto 0'
+              }}
+            >
+              <FiSearch size={13} /> Discover References
+            </button>
           </div>
         ) : (
           references.map((ref) => {
@@ -115,6 +129,24 @@ export default function ReferencePanel({ references, onAddReference, onDeleteRef
           })
         )}
       </div>
+
+      {/* Find More button at bottom */}
+      {references.length > 0 && (
+        <div style={{ padding: '10px 12px', borderTop: '1px solid var(--border-color)' }}>
+          <button
+            onClick={() => navigate('/references')}
+            style={{
+              width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+              padding: '8px 12px', borderRadius: '8px', border: '1px solid rgba(124, 58, 237, 0.3)',
+              background: 'rgba(124, 58, 237, 0.08)', color: '#a78bfa',
+              cursor: 'pointer', fontSize: '0.72rem', fontWeight: 600,
+              fontFamily: 'var(--font-sans)', transition: 'all 0.2s'
+            }}
+          >
+            <FiSearch size={12} /> Find More References
+          </button>
+        </div>
+      )}
     </div>
   );
 }

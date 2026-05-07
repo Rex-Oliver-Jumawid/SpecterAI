@@ -88,6 +88,63 @@ export default function ReferencesPage({ references, onAddReference, onAddRefere
     return { bg: 'var(--bg-tertiary)', color: 'var(--text-muted)', border: 'var(--border-color)' };
   };
 
+  const [expandedScoreId, setExpandedScoreId] = useState(null);
+
+  const getScoreExplanation = (ref) => {
+    const factors = [];
+    let score = ref.relevance_score || 0;
+    
+    // Citation impact
+    if (ref.cited_by_count > 100) {
+      factors.push({ label: 'High citation count', detail: `${ref.cited_by_count.toLocaleString()} citations — widely recognized`, impact: '+', color: '#4ade80' });
+    } else if (ref.cited_by_count > 20) {
+      factors.push({ label: 'Moderate citations', detail: `${ref.cited_by_count.toLocaleString()} citations — established work`, impact: '+', color: '#fbbf24' });
+    } else {
+      factors.push({ label: 'Few citations', detail: `${(ref.cited_by_count || 0).toLocaleString()} citations — may be new or niche`, impact: '○', color: 'var(--text-muted)' });
+    }
+
+    // Journal presence
+    if (ref.journal) {
+      factors.push({ label: 'Published in journal', detail: ref.journal, impact: '+', color: '#4ade80' });
+    } else {
+      factors.push({ label: 'No journal listed', detail: 'May be a preprint or grey literature', impact: '−', color: '#fb923c' });
+    }
+
+    // DOI verification
+    if (ref.doi) {
+      factors.push({ label: 'DOI verified', detail: 'Registered with a persistent identifier', impact: '+', color: '#4ade80' });
+    } else {
+      factors.push({ label: 'No DOI', detail: 'Cannot verify through DOI registry', impact: '−', color: '#fb923c' });
+    }
+
+    // Recency
+    const currentYear = new Date().getFullYear();
+    const age = currentYear - (ref.year || 2000);
+    if (age <= 3) {
+      factors.push({ label: 'Very recent', detail: `Published ${ref.year} — cutting-edge`, impact: '+', color: '#4ade80' });
+    } else if (age <= 7) {
+      factors.push({ label: 'Recent', detail: `Published ${ref.year} — still relevant`, impact: '+', color: '#fbbf24' });
+    } else {
+      factors.push({ label: 'Older publication', detail: `Published ${ref.year} — may need newer sources`, impact: '○', color: 'var(--text-muted)' });
+    }
+
+    // Abstract quality
+    if (ref.abstract && ref.abstract.length > 100) {
+      factors.push({ label: 'Detailed abstract', detail: 'Rich metadata for AI analysis', impact: '+', color: '#4ade80' });
+    } else {
+      factors.push({ label: 'Limited abstract', detail: 'Less context available', impact: '○', color: 'var(--text-muted)' });
+    }
+
+    // Overall verdict
+    let verdict;
+    if (score >= 80) verdict = '🟢 Excellent source — highly recommended';
+    else if (score >= 60) verdict = '🟡 Good source — suitable for most papers';
+    else if (score >= 40) verdict = '🟠 Acceptable — verify relevance to your topic';
+    else verdict = '🔴 Low relevance — consider alternatives';
+
+    return { factors, verdict };
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
       {/* Header */}
@@ -291,12 +348,17 @@ export default function ReferencesPage({ references, onAddReference, onAddRefere
                   const targetNb = allNotebooks.find(n => n.id === selectedNotebookId);
                   return (
                     <div key={ref.id} className="glass-card" style={{ padding: '18px', display: 'flex', gap: '14px', alignItems: 'start' }}>
-                      {/* Score badge */}
-                      <div style={{
-                        width: '48px', height: '48px', borderRadius: '12px', flexShrink: 0,
-                        background: scoreStyle.bg, border: `1px solid ${scoreStyle.border}`,
-                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1px'
-                      }}>
+                      {/* Score badge — clickable for explanation */}
+                      <div
+                        onClick={() => setExpandedScoreId(expandedScoreId === ref.id ? null : ref.id)}
+                        style={{
+                          width: '48px', height: '48px', borderRadius: '12px', flexShrink: 0,
+                          background: scoreStyle.bg, border: `1px solid ${scoreStyle.border}`,
+                          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1px',
+                          cursor: 'pointer', transition: 'transform 0.15s',
+                        }}
+                        title="Click to see score breakdown"
+                      >
                         <span style={{ fontSize: '1rem', fontWeight: 800, color: scoreStyle.color, lineHeight: 1 }}>
                           {ref.relevance_score}
                         </span>
@@ -342,6 +404,43 @@ export default function ReferencesPage({ references, onAddReference, onAddRefere
                             </a>
                           )}
                         </div>
+
+                        {/* Score Explanation Dropdown */}
+                        {expandedScoreId === ref.id && (() => {
+                          const explanation = getScoreExplanation(ref);
+                          return (
+                            <div className="animate-slide-down" style={{
+                              marginTop: '10px', padding: '12px', borderRadius: '8px',
+                              background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)'
+                            }}>
+                              <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '8px' }}>
+                                📊 Score Breakdown — {ref.relevance_score}/100
+                              </div>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                                {explanation.factors.map((f, i) => (
+                                  <div key={i} style={{ display: 'flex', alignItems: 'start', gap: '6px', fontSize: '0.68rem' }}>
+                                    <span style={{
+                                      width: '16px', height: '16px', borderRadius: '4px', flexShrink: 0,
+                                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                      fontSize: '0.6rem', fontWeight: 700, color: f.color,
+                                      background: f.impact === '+' ? 'rgba(74, 222, 128, 0.1)' : f.impact === '−' ? 'rgba(251, 146, 60, 0.1)' : 'var(--bg-card)'
+                                    }}>{f.impact}</span>
+                                    <div>
+                                      <span style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>{f.label}</span>
+                                      <span style={{ color: 'var(--text-muted)' }}> — {f.detail}</span>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                              <div style={{
+                                marginTop: '8px', paddingTop: '8px', borderTop: '1px solid var(--border-color)',
+                                fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-secondary)'
+                              }}>
+                                {explanation.verdict}
+                              </div>
+                            </div>
+                          );
+                        })()}
                       </div>
 
                       {/* Save button */}
