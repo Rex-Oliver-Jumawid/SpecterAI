@@ -94,6 +94,18 @@ const Editor = React.forwardRef(({ content, onChange, wordCount, documentTitle, 
   const [editingTabName, setEditingTabName] = useState('');
   const [showDownloadMenu, setShowDownloadMenu] = useState(false);
 
+  // Transform [cite:id] into APA formatted text for display
+  const formatCitations = useCallback((html) => {
+    if (!html || !references || references.length === 0) return html;
+    return html.replace(/\[cite:([^\]]+)\]/g, (match, id) => {
+      const ref = references.find(r => r.id === id);
+      if (!ref) return match;
+      const authorLast = (ref.authors || 'Unknown').split(',')[0].trim().split(' ').pop();
+      const year = ref.year || 'n.d.';
+      return `<span class="apa-citation" data-cite-id="${id}" title="${ref.title}">(${authorLast}, ${year})</span>`;
+    });
+  }, [references]);
+
   // Parse pages from content
   const pages = useMemo(() => {
     if (!content) return [''];
@@ -145,7 +157,7 @@ const Editor = React.forwardRef(({ content, onChange, wordCount, documentTitle, 
 
   const currentPageContent = pages[activeTab] || '';
 
-  const initialHtml = useMemo(() => markdownToHtml(currentPageContent || ''), []);
+  const initialHtml = useMemo(() => formatCitations(markdownToHtml(currentPageContent || '')), []);
 
   const editor = useEditor({
     extensions: [
@@ -170,7 +182,7 @@ const Editor = React.forwardRef(({ content, onChange, wordCount, documentTitle, 
   // Switch tab — update editor content
   useEffect(() => {
     if (editor && pages[activeTab] !== undefined) {
-      const pageHtml = markdownToHtml(pages[activeTab] || '');
+      const pageHtml = formatCitations(markdownToHtml(pages[activeTab] || ''));
       const currentHtml = editor.getHTML();
       if (currentHtml !== pageHtml) {
         editor.commands.setContent(pageHtml || '<p></p>');
@@ -181,7 +193,7 @@ const Editor = React.forwardRef(({ content, onChange, wordCount, documentTitle, 
   // Sync external content changes (only if editor is empty, prevents cursor jumping)
   useEffect(() => {
     if (editor && content && editor.isEmpty) {
-      const html = markdownToHtml(pages[activeTab] || '');
+      const html = formatCitations(markdownToHtml(pages[activeTab] || ''));
       if (editor.getHTML() !== html) {
         editor.commands.setContent(html);
       }

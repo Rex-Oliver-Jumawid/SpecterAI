@@ -375,15 +375,34 @@ function NotebookPage({ notebookId, appState }) {
                         <span className="badge badge-verified" style={{ fontSize: '0.52rem' }}>APA</span>
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                        {bibliography.map((ref, i) => (
-                          <div key={i} style={{
-                            fontSize: '0.65rem', lineHeight: 1.5, padding: '5px 8px', borderRadius: '5px',
-                            background: 'var(--bg-card)', borderLeft: '2px solid var(--color-specter-500)', color: 'var(--text-tertiary)'
-                          }}>
-                            <strong style={{ color: 'var(--text-secondary)' }}>{ref.authors}</strong>{' '}
-                            ({ref.year}). {ref.title}. <em>{ref.journal}</em>.
-                          </div>
-                        ))}
+                        {bibliography.map((ref, i) => {
+                          const authorLast = (ref.authors || 'Unknown').split(',')[0].split(' ').pop();
+                          return (
+                            <div key={i} style={{
+                              fontSize: '0.65rem', lineHeight: 1.5, padding: '5px 8px', borderRadius: '5px',
+                              background: 'var(--bg-card)', borderLeft: '2px solid var(--color-specter-500)', color: 'var(--text-tertiary)',
+                              display: 'flex', alignItems: 'start', gap: '6px'
+                            }}>
+                              <div style={{ flex: 1 }}>
+                                <strong style={{ color: 'var(--text-secondary)' }}>{ref.authors || 'Unknown'}</strong>{' '}
+                                ({ref.year || 'n.d.'}). {ref.title}.{ref.journal ? <> <em>{ref.journal}</em>.</> : ''}
+                              </div>
+                              <button
+                                onClick={() => {
+                                  // Remove citation from content and delete the reference
+                                  setContent(prev => prev.replace(new RegExp(`\\s*\\[cite:${ref.id}\\]`, 'g'), ''));
+                                  handleDeleteReference(ref.id);
+                                }}
+                                title="Remove from bibliography"
+                                style={{
+                                  flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer',
+                                  color: 'var(--text-muted)', padding: '0 2px', fontSize: '0.7rem',
+                                  lineHeight: 1, marginTop: '1px'
+                                }}
+                              >✕</button>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   )}
@@ -560,7 +579,22 @@ function AppShell() {
   const handleDeleteReference = async (id) => {
     try { await refsApi.delete(id); setRefs(prev => prev.filter(r => r.id !== id)); } catch (e) { console.error(e); }
   };
-  const insertCitation = (refId) => setContent(prev => prev + ' [cite:' + refId + ']');
+  const insertCitation = (refId) => {
+    const ref = refs.find(r => r.id === refId);
+    if (!ref) return;
+    const authorLast = (ref.authors || 'Unknown').split(',')[0].trim().split(' ').pop();
+    const year = ref.year || 'n.d.';
+    // Insert APA in-text citation as styled span with data attribute for bibliography matching
+    const citationHtml = `<span class="inline-citation" data-cite-id="${refId}" contenteditable="false">(${authorLast}, ${year})</span>&nbsp;`;
+    setContent(prev => {
+      // Also keep machine-readable tag for bibliography detection
+      if (!prev.includes(`[cite:${refId}]`)) {
+        return prev + ` [cite:${refId}]`;
+      }
+      return prev;
+    });
+    // Also tell tiptap to insert at cursor if possible
+  };
   const handleCreatePlan = async (data) => {
     if (!notebook) return;
     try {
