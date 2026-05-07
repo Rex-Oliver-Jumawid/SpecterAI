@@ -1,12 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, ChevronRight, Plus, Play, Trash2, Clock, Zap, BookOpen, Calendar, Columns3, LayoutGrid } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Play, Trash2, Clock, Zap, BookOpen, Calendar } from 'lucide-react';
 
 export default function CalendarPage({ plans, onCreatePlanForNotebook, onDeletePlan, onTriggerAi, allNotebooks = [] }) {
   const [viewDate, setViewDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(null);
   const [hoveredDay, setHoveredDay] = useState(null);
-  const [moreView, setMoreView] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [title, setTitle] = useState('');
   const [outline, setOutline] = useState('');
@@ -18,7 +17,7 @@ export default function CalendarPage({ plans, onCreatePlanForNotebook, onDeleteP
   const year = viewDate.getFullYear();
   const month = viewDate.getMonth();
   const today = new Date(); today.setHours(0, 0, 0, 0);
-  const monthShort = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+  const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
   const dayNames = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 
   const calendarDays = useMemo(() => {
@@ -50,8 +49,8 @@ export default function CalendarPage({ plans, onCreatePlanForNotebook, onDeleteP
 
   const getKey = (d) => {
     const m = ((d.month % 12) + 12) % 12;
-    const y = d.month < 0 ? year - 1 : d.month > 11 ? year + 1 : year;
-    return `${y}-${m}-${d.day}`;
+    const y2 = d.month < 0 ? year - 1 : d.month > 11 ? year + 1 : year;
+    return `${y2}-${m}-${d.day}`;
   };
 
   const isToday = (d) => {
@@ -72,7 +71,6 @@ export default function CalendarPage({ plans, onCreatePlanForNotebook, onDeleteP
       setSelectedDate(null);
     } else {
       setSelectedDate(date);
-      if (!moreView) setMoreView(true);
     }
   };
 
@@ -80,27 +78,18 @@ export default function CalendarPage({ plans, onCreatePlanForNotebook, onDeleteP
     ? (plansByDate[`${selectedDate.getFullYear()}-${selectedDate.getMonth()}-${selectedDate.getDate()}`] || [])
     : [];
 
-  const allTasksForMonth = useMemo(() => {
-    return plans.filter(p => {
-      if (!p.scheduled_date) return false;
-      const d = new Date(p.scheduled_date);
-      return d.getMonth() === month && d.getFullYear() === year;
-    }).sort((a, b) => new Date(a.scheduled_date) - new Date(b.scheduled_date));
-  }, [plans, month, year]);
-
   const handleCreate = () => {
     if (!title.trim() || !selectedDate || !selectedNotebookId) return;
-    const y2 = selectedDate.getFullYear();
-    const m2 = String(selectedDate.getMonth() + 1).padStart(2, '0');
-    const d2 = String(selectedDate.getDate()).padStart(2, '0');
+    const yy = selectedDate.getFullYear();
+    const mm = String(selectedDate.getMonth() + 1).padStart(2, '0');
+    const dd = String(selectedDate.getDate()).padStart(2, '0');
     onCreatePlanForNotebook(selectedNotebookId, {
       title: title.trim(), outline: outline.trim(),
       output_type: outputType, word_target: wordTarget,
-      scheduled_date: `${y2}-${m2}-${d2}T${scheduledTime}`,
+      scheduled_date: `${yy}-${mm}-${dd}T${scheduledTime}`,
       scheduled_time: scheduledTime, auto_start: true,
     });
-    setTitle(''); setOutline('');
-    setShowForm(false);
+    setTitle(''); setOutline(''); setShowForm(false);
   };
 
   const getStatusConfig = (s) => ({
@@ -115,312 +104,276 @@ export default function CalendarPage({ plans, onCreatePlanForNotebook, onDeleteP
   const totalReview = plans.filter(p => p.status === 'review').length;
   const totalDone = plans.filter(p => p.status === 'done').length;
 
-  /* shared input style */
-  const inputStyle = {
-    width: '100%', padding: '10px 12px', borderRadius: '10px',
-    border: '1px solid #27272a', background: '#18181b', color: '#e4e4e7',
-    fontSize: '0.78rem', outline: 'none', fontFamily: 'var(--font-sans)',
+  const inp = {
+    width: '100%', padding: '9px 12px', borderRadius: '8px',
+    border: '1px solid var(--border-color)', background: 'var(--bg-primary)',
+    color: 'var(--text-primary)', fontSize: '0.78rem', outline: 'none',
+    fontFamily: 'var(--font-sans)',
   };
 
   return (
-    <div style={{ display: 'flex', height: '100%', background: 'var(--bg-primary)', overflow: 'hidden' }}>
-      {/* Main scrollable area */}
-      <div style={{
-        flex: 1, display: 'flex', overflowY: 'auto', padding: '32px 32px',
-        gap: '40px', alignItems: 'flex-start', justifyContent: 'center',
-        flexWrap: 'wrap',
-      }}>
+    <div style={{ display: 'flex', height: '100%', overflow: 'hidden' }}>
 
-        {/* ─── LEFT: Calendar ─── */}
-        <motion.div layout style={{ width: '100%', maxWidth: '480px', flexShrink: 0 }}>
-          {/* Month Header */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
-            <h2 style={{ fontSize: '2rem', fontWeight: 800, letterSpacing: '0.06em', color: '#d4d4d8', margin: 0, fontFamily: 'var(--font-sans)' }}>
-              {monthShort[month]} <span style={{ opacity: 0.35 }}>{year}</span>
-            </h2>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <button onClick={() => setViewDate(new Date(year, month - 1, 1))} style={navBtnStyle}><ChevronLeft size={15} /></button>
-              <button onClick={() => setViewDate(new Date())} style={{ ...navBtnStyle, padding: '5px 14px', fontSize: '0.7rem', fontWeight: 600 }}>Today</button>
-              <button onClick={() => setViewDate(new Date(year, month + 1, 1))} style={navBtnStyle}><ChevronRight size={15} /></button>
-
-              {/* View Toggle */}
-              <div
-                onClick={() => setMoreView(!moreView)}
-                style={{
-                  position: 'relative', display: 'flex', alignItems: 'center', gap: '10px',
-                  borderRadius: '8px', border: '1px solid #27272a', padding: '4px 6px',
-                  cursor: 'pointer', marginLeft: '6px', background: '#18181b',
-                }}
-              >
-                <Columns3 size={16} style={{ zIndex: 2, color: !moreView ? '#0a0a0a' : '#52525b' }} />
-                <LayoutGrid size={16} style={{ zIndex: 2, color: moreView ? '#0a0a0a' : '#52525b' }} />
-                <div style={{
-                  position: 'absolute', left: '3px', top: '50%', height: '75%', width: '24px',
-                  borderRadius: '5px', background: '#a78bfa',
-                  transition: 'transform 0.25s cubic-bezier(0.4,0,0.2,1)',
-                  transform: moreView ? 'translateY(-50%) translateX(30px)' : 'translateY(-50%) translateX(0px)',
-                }} />
+      {/* ─── LEFT: Calendar ─── */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'auto', padding: '28px 32px' }}>
+        {/* Month nav */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+          <div>
+            <h1 style={{
+              fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0,
+              fontFamily: 'var(--font-sans)', display: 'flex', alignItems: 'center', gap: '10px',
+            }}>
+              <div style={{
+                width: '34px', height: '34px', borderRadius: '10px',
+                background: 'linear-gradient(135deg, #7c3aed, #6366f1)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <Calendar size={16} color="white" />
               </div>
+              {monthNames[month]} {year}
+            </h1>
+            <div style={{ display: 'flex', gap: '8px', marginTop: '8px', paddingLeft: '44px' }}>
+              <span style={badge('#a78bfa', 'rgba(124,58,237,0.1)')}>{totalPlanned} planned</span>
+              <span style={badge('#fbbf24', 'rgba(251,191,36,0.08)')}>{totalReview} review</span>
+              <span style={badge('#4ade80', 'rgba(34,197,94,0.08)')}>{totalDone} done</span>
             </div>
           </div>
-
-          {/* Stats */}
-          <div style={{ display: 'flex', gap: '8px', marginBottom: '14px' }}>
-            <span style={statBadge('#a78bfa', 'rgba(124,58,237,0.1)')}>{totalPlanned} planned</span>
-            <span style={statBadge('#fbbf24', 'rgba(251,191,36,0.08)')}>{totalReview} review</span>
-            <span style={statBadge('#4ade80', 'rgba(34,197,94,0.08)')}>{totalDone} done</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <button onClick={() => setViewDate(new Date(year, month - 1, 1))} style={navBtn}><ChevronLeft size={16} /></button>
+            <button onClick={() => setViewDate(new Date())} style={{ ...navBtn, padding: '6px 14px', fontSize: '0.72rem', fontWeight: 600 }}>Today</button>
+            <button onClick={() => setViewDate(new Date(year, month + 1, 1))} style={navBtn}><ChevronRight size={16} /></button>
           </div>
+        </div>
 
-          {/* Day-of-week headers */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '5px', marginBottom: '5px' }}>
-            {dayNames.map(d => (
-              <div key={d} style={{
-                padding: '5px 0', textAlign: 'center', fontSize: '0.6rem',
-                fontWeight: 700, color: '#a1a1aa', background: '#1e1e1e',
-                borderRadius: '8px', letterSpacing: '0.04em',
-              }}>{d}</div>
-            ))}
-          </div>
+        {/* Day-of-week headers */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px', marginBottom: '4px' }}>
+          {dayNames.map(d => (
+            <div key={d} style={{
+              padding: '6px 0', textAlign: 'center', fontSize: '0.62rem',
+              fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.05em',
+            }}>{d}</div>
+          ))}
+        </div>
 
-          {/* Day Grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '5px' }}>
-            {calendarDays.map((d, i) => {
-              const tasks = plansByDate[getKey(d)] || [];
-              const sel = isSelected(d);
-              const td = isToday(d);
-              const hovered = hoveredDay === `${d.month}-${d.day}`;
-              const hasReview = tasks.some(t => t.status === 'review');
-              const hasTasks = tasks.length > 0;
+        {/* Day Grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px', flex: 1 }}>
+          {calendarDays.map((d, i) => {
+            const tasks = plansByDate[getKey(d)] || [];
+            const sel = isSelected(d);
+            const td = isToday(d);
+            const hovered = hoveredDay === `${d.month}-${d.day}`;
+            const hasReview = tasks.some(t => t.status === 'review');
+            const hasTasks = tasks.length > 0;
 
-              return (
-                <motion.div
-                  key={i}
-                  onClick={() => handleSelect(d)}
-                  onMouseEnter={() => !d.other && setHoveredDay(`${d.month}-${d.day}`)}
-                  onMouseLeave={() => setHoveredDay(null)}
-                  whileHover={!d.other ? { scale: 1.08 } : {}}
-                  style={{
-                    position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    height: '3.6rem', borderRadius: '14px', cursor: d.other ? 'default' : 'pointer',
-                    background: sel ? 'linear-gradient(135deg, #7c3aed, #6366f1)'
-                      : td ? 'rgba(124,58,237,0.25)'
-                      : d.other ? 'transparent' : '#18181b',
-                    opacity: d.other ? 0.25 : 1,
-                    transition: 'background 0.2s, box-shadow 0.2s',
-                    boxShadow: sel ? '0 4px 20px rgba(124,58,237,0.35)' : 'none',
-                  }}
-                >
-                  {!d.other && (
-                    <span style={{
-                      fontSize: '0.82rem', fontWeight: td || sel ? 700 : 400,
-                      color: sel ? 'white' : td ? '#c4b5fd' : '#a1a1aa',
-                    }}>
-                      {String(d.day).padStart(2, '0')}
-                    </span>
-                  )}
-
-                  {hasTasks && (
-                    <div style={{
-                      position: 'absolute', bottom: '3px', right: '3px',
-                      width: '18px', height: '18px', borderRadius: '999px',
-                      background: hasReview ? '#fbbf24' : '#7c3aed',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: '0.55rem', fontWeight: 700,
-                      color: hasReview ? '#0a0a0a' : 'white',
-                    }}>
-                      {tasks.length}
-                    </div>
-                  )}
-                </motion.div>
-              );
-            })}
-          </div>
-        </motion.div>
-
-        {/* ─── RIGHT: Task Details ─── */}
-        <AnimatePresence>
-          {moreView && (
-            <motion.div
-              initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}
-              transition={{ duration: 0.25, ease: 'easeOut' }}
-              style={{ width: '100%', maxWidth: '420px', flexShrink: 0 }}
-            >
-              {/* Header */}
-              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '20px' }}>
-                <div>
-                  <h2 style={{ fontSize: '1.8rem', fontWeight: 800, letterSpacing: '0.04em', color: '#d4d4d8', margin: 0, fontFamily: 'var(--font-sans)' }}>
-                    {selectedDate ? selectedDate.toLocaleDateString('en-US', { weekday: 'long' }) : 'Tasks'}
-                  </h2>
-                  <p style={{ fontSize: '0.75rem', color: '#52525b', margin: '4px 0 0', fontWeight: 500 }}>
-                    {selectedDate
-                      ? selectedDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
-                      : `${allTasksForMonth.length} tasks this month`}
-                  </p>
-                </div>
-                {selectedDate && (
-                  <button onClick={() => setShowForm(!showForm)} style={{
-                    display: 'flex', alignItems: 'center', gap: '5px', padding: '7px 14px',
-                    borderRadius: '10px', background: '#7c3aed', color: 'white', border: 'none',
-                    cursor: 'pointer', fontSize: '0.72rem', fontWeight: 600,
+            return (
+              <motion.div
+                key={i}
+                onClick={() => handleSelect(d)}
+                onMouseEnter={() => !d.other && setHoveredDay(`${d.month}-${d.day}`)}
+                onMouseLeave={() => setHoveredDay(null)}
+                whileHover={!d.other ? { scale: 1.06 } : {}}
+                transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                style={{
+                  position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  minHeight: '56px', borderRadius: '12px', cursor: d.other ? 'default' : 'pointer',
+                  background: sel ? 'linear-gradient(135deg, #7c3aed, #6366f1)'
+                    : td ? 'rgba(124,58,237,0.18)'
+                    : d.other ? 'transparent' : 'var(--bg-card)',
+                  opacity: d.other ? 0.2 : 1,
+                  border: sel ? 'none' : td ? '1px solid rgba(124,58,237,0.3)' : '1px solid var(--border-color)',
+                  boxShadow: sel ? '0 4px 16px rgba(124,58,237,0.35)' : 'none',
+                }}
+              >
+                {!d.other && (
+                  <span style={{
+                    fontSize: '0.82rem', fontWeight: td || sel ? 700 : 400,
+                    color: sel ? 'white' : td ? '#a78bfa' : 'var(--text-secondary)',
                   }}>
-                    <Plus size={14} /> Add Task
-                  </button>
+                    {d.day}
+                  </span>
                 )}
-              </div>
 
-              {/* ─ Create Form ─ */}
-              <AnimatePresence>
-                {showForm && selectedDate && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
-                    style={{ background: '#111111', borderRadius: '14px', border: '1px solid #27272a', padding: '16px', marginBottom: '16px', overflow: 'hidden' }}
-                  >
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                      <select value={selectedNotebookId} onChange={e => setSelectedNotebookId(e.target.value)} style={inputStyle}>
-                        <option value="">— Select notebook —</option>
-                        {allNotebooks.map(nb => <option key={nb.id} value={nb.id}>{nb.title || 'Untitled'}</option>)}
-                      </select>
-                      <input type="text" value={title} onChange={e => setTitle(e.target.value)} placeholder="Task title..." style={inputStyle} />
-                      <textarea value={outline} onChange={e => setOutline(e.target.value)} placeholder="What should Specter write?"
-                        rows={2} style={{ ...inputStyle, resize: 'vertical' }} />
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                        <select value={outputType} onChange={e => setOutputType(e.target.value)} style={{ ...inputStyle, flex: 1 }}>
-                          <option value="draft">📝 Draft</option>
-                          <option value="outline">📋 Outline</option>
-                          <option value="bullet_points">📌 Bullets</option>
-                        </select>
-                        <input type="number" value={wordTarget} onChange={e => setWordTarget(parseInt(e.target.value) || 500)}
-                          style={{ ...inputStyle, width: '80px' }} />
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <Clock size={14} style={{ color: '#52525b', flexShrink: 0 }} />
-                        <input type="time" value={scheduledTime} onChange={e => setScheduledTime(e.target.value)} style={{ ...inputStyle }} />
-                      </div>
-
-                      {/* Auto-start info */}
-                      <div style={{
-                        display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px',
-                        borderRadius: '10px', background: 'rgba(124,58,237,0.06)', border: '1px solid rgba(124,58,237,0.12)',
-                      }}>
-                        <Zap size={13} style={{ color: '#a78bfa', flexShrink: 0 }} />
-                        <span style={{ fontSize: '0.68rem', color: '#a78bfa', fontWeight: 500 }}>AI auto-starts 5 min after deadline</span>
-                      </div>
-
-                      <div style={{ display: 'flex', gap: '8px', marginTop: '2px' }}>
-                        <button onClick={handleCreate} disabled={!title.trim() || !selectedNotebookId}
-                          style={{
-                            flex: 1, padding: '10px', borderRadius: '10px', border: 'none', cursor: 'pointer',
-                            background: (!title.trim() || !selectedNotebookId) ? '#27272a' : '#7c3aed',
-                            color: (!title.trim() || !selectedNotebookId) ? '#52525b' : 'white',
-                            fontWeight: 600, fontSize: '0.78rem', fontFamily: 'var(--font-sans)',
-                          }}>
-                          ⚡ Schedule Task
-                        </button>
-                        <button onClick={() => setShowForm(false)}
-                          style={{
-                            padding: '10px 16px', borderRadius: '10px', border: '1px solid #27272a',
-                            background: 'transparent', color: '#71717a', cursor: 'pointer',
-                            fontSize: '0.78rem', fontFamily: 'var(--font-sans)',
-                          }}>
-                          Cancel
-                        </button>
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              {/* ─ Task List ─ */}
-              <div style={{
-                display: 'flex', flexDirection: 'column', maxHeight: 'calc(100vh - 260px)',
-                overflowY: 'auto', borderRadius: '14px', border: '1px solid #27272a',
-                background: '#111111',
-              }}>
-                {(selectedDate ? selectedDayTasks : allTasksForMonth).length === 0 ? (
-                  <div style={{ padding: '48px 24px', textAlign: 'center' }}>
-                    <Calendar size={32} style={{ color: '#27272a', margin: '0 auto 12px' }} />
-                    <div style={{ fontSize: '0.82rem', fontWeight: 600, color: '#52525b' }}>
-                      {selectedDate ? 'No tasks on this day' : 'No tasks this month'}
-                    </div>
-                    <div style={{ fontSize: '0.7rem', color: '#3f3f46', marginTop: '4px' }}>
-                      {selectedDate ? 'Click "+ Add Task" to schedule one.' : 'Select a day to create tasks.'}
-                    </div>
+                {hasTasks && (
+                  <div style={{
+                    position: 'absolute', bottom: '3px', right: '3px',
+                    width: '16px', height: '16px', borderRadius: '999px',
+                    background: hasReview ? '#fbbf24' : '#7c3aed',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '0.5rem', fontWeight: 700,
+                    color: hasReview ? '#000' : 'white',
+                  }}>
+                    {tasks.length}
                   </div>
-                ) : (
-                  (selectedDate ? selectedDayTasks : allTasksForMonth).map((task, idx) => {
+                )}
+              </motion.div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ─── RIGHT: Sidebar ─── */}
+      <div style={{
+        width: '340px', flexShrink: 0, borderLeft: '1px solid var(--border-color)',
+        background: 'var(--bg-secondary)', display: 'flex', flexDirection: 'column', overflow: 'hidden',
+      }}>
+        {selectedDate ? (
+          <>
+            {/* Day Header */}
+            <div style={{
+              padding: '20px', borderBottom: '1px solid var(--border-color)',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            }}>
+              <div>
+                <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                  {selectedDate.toLocaleDateString('en-US', { weekday: 'long' })}
+                </div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                  {selectedDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                </div>
+              </div>
+              <button onClick={() => setShowForm(!showForm)} style={{
+                display: 'flex', alignItems: 'center', gap: '4px', padding: '7px 12px',
+                borderRadius: '8px', background: '#7c3aed', color: 'white', border: 'none',
+                cursor: 'pointer', fontSize: '0.72rem', fontWeight: 600,
+              }}>
+                <Plus size={13} /> Add
+              </button>
+            </div>
+
+            {/* Create Form */}
+            {showForm && (
+              <div style={{ padding: '14px', borderBottom: '1px solid var(--border-color)', background: 'var(--bg-tertiary)' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <select value={selectedNotebookId} onChange={e => setSelectedNotebookId(e.target.value)} style={inp}>
+                    <option value="">— Select notebook —</option>
+                    {allNotebooks.map(nb => <option key={nb.id} value={nb.id}>{nb.title || 'Untitled'}</option>)}
+                  </select>
+                  <input type="text" value={title} onChange={e => setTitle(e.target.value)} placeholder="Task title..." style={inp} />
+                  <textarea value={outline} onChange={e => setOutline(e.target.value)} placeholder="What should Specter write?"
+                    rows={2} style={{ ...inp, resize: 'vertical' }} />
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    <select value={outputType} onChange={e => setOutputType(e.target.value)} style={{ ...inp, flex: 1 }}>
+                      <option value="draft">📝 Draft</option>
+                      <option value="outline">📋 Outline</option>
+                      <option value="bullet_points">📌 Bullets</option>
+                    </select>
+                    <input type="number" value={wordTarget} onChange={e => setWordTarget(parseInt(e.target.value) || 500)}
+                      style={{ ...inp, width: '70px' }} />
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Clock size={13} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                    <input type="time" value={scheduledTime} onChange={e => setScheduledTime(e.target.value)} style={inp} />
+                  </div>
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 10px',
+                    borderRadius: '8px', background: 'rgba(124,58,237,0.06)', border: '1px solid rgba(124,58,237,0.1)',
+                  }}>
+                    <Zap size={11} style={{ color: '#a78bfa' }} />
+                    <span style={{ fontSize: '0.65rem', color: '#a78bfa', fontWeight: 500 }}>AI auto-starts 5 min after deadline</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    <button onClick={handleCreate} disabled={!title.trim() || !selectedNotebookId}
+                      style={{
+                        flex: 1, padding: '9px', borderRadius: '8px', border: 'none', cursor: 'pointer',
+                        background: (!title.trim() || !selectedNotebookId) ? 'var(--bg-hover)' : '#7c3aed',
+                        color: (!title.trim() || !selectedNotebookId) ? 'var(--text-muted)' : 'white',
+                        fontWeight: 600, fontSize: '0.75rem', fontFamily: 'var(--font-sans)',
+                      }}>
+                      ⚡ Schedule Task
+                    </button>
+                    <button onClick={() => setShowForm(false)} style={{
+                      padding: '9px 14px', borderRadius: '8px', border: '1px solid var(--border-color)',
+                      background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer',
+                      fontSize: '0.75rem', fontFamily: 'var(--font-sans)',
+                    }}>Cancel</button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Task List */}
+            <div style={{ flex: 1, overflow: 'auto', padding: '12px' }}>
+              {selectedDayTasks.length === 0 ? (
+                <div style={{ textAlign: 'center', paddingTop: '40px' }}>
+                  <Calendar size={28} style={{ color: 'var(--text-muted)', opacity: 0.3, margin: '0 auto 8px' }} />
+                  <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-muted)' }}>No tasks on this day</div>
+                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', opacity: 0.6, marginTop: '4px' }}>Click "+ Add" to schedule one.</div>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {selectedDayTasks.map((task, idx) => {
                     const st = getStatusConfig(task.status);
                     const overdue = task.scheduled_date && new Date(task.scheduled_date) < new Date() && task.status === 'planned';
                     const taskNotebook = allNotebooks.find(nb => nb.id === task.notebook_id);
-                    const taskDate = new Date(task.scheduled_date);
-
                     return (
                       <motion.div
                         key={task.id}
-                        initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.2, delay: idx * 0.03 }}
+                        initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.15, delay: idx * 0.03 }}
                         style={{
-                          padding: '14px 16px',
-                          borderBottom: '1px solid #1e1e1e',
+                          padding: '12px', borderRadius: '10px',
+                          background: 'var(--bg-card)', border: '1px solid var(--border-color)',
                         }}
                       >
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-                          <span style={{ fontSize: '0.68rem', color: '#52525b' }}>
-                            {taskDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-                          </span>
-                          <span style={{ fontSize: '0.68rem', color: '#52525b' }}>
-                            {task.scheduled_time || taskDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-                          </span>
-                        </div>
-                        <h3 style={{ fontSize: '0.92rem', fontWeight: 600, color: '#e4e4e7', margin: '0 0 3px' }}>{task.title}</h3>
-                        {taskNotebook && (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.65rem', color: '#7c3aed', marginBottom: '4px' }}>
-                            <BookOpen size={10} /> {taskNotebook.title}
+                        <div style={{ display: 'flex', alignItems: 'start', gap: '8px' }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)' }}>{task.title}</div>
+                            {taskNotebook && (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '3px', fontSize: '0.62rem', color: '#7c3aed', marginTop: '2px' }}>
+                                <BookOpen size={9} /> {taskNotebook.title}
+                              </div>
+                            )}
+                            {task.outline && (
+                              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '4px', lineHeight: 1.4 }}>{task.outline}</div>
+                            )}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '6px', flexWrap: 'wrap' }}>
+                              <span style={{ fontSize: '0.58rem', padding: '2px 7px', borderRadius: '999px', background: st.bg, color: st.color, fontWeight: 600 }}>{st.label}</span>
+                              <span style={{ fontSize: '0.55rem', color: 'var(--text-muted)' }}>{task.word_target}w</span>
+                              <span style={{ fontSize: '0.52rem', padding: '1px 5px', borderRadius: '4px', background: 'rgba(124,58,237,0.08)', color: '#7c3aed', display: 'flex', alignItems: 'center', gap: '2px' }}>
+                                <Zap size={7} /> Auto
+                              </span>
+                              {overdue && <span style={{ fontSize: '0.52rem', padding: '1px 5px', borderRadius: '4px', background: 'rgba(248,113,113,0.08)', color: '#f87171' }}>Overdue</span>}
+                            </div>
                           </div>
-                        )}
-                        {task.outline && (
-                          <p style={{ fontSize: '0.7rem', color: '#3f3f46', margin: '0 0 8px', lineHeight: 1.5 }}>{task.outline}</p>
-                        )}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                          <span style={{ fontSize: '0.6rem', padding: '2px 8px', borderRadius: '999px', background: st.bg, color: st.color, fontWeight: 600 }}>{st.label}</span>
-                          <span style={{ fontSize: '0.58rem', color: '#3f3f46' }}>{task.word_target} words</span>
-                          <span style={{ fontSize: '0.55rem', padding: '2px 6px', borderRadius: '6px', background: 'rgba(124,58,237,0.08)', color: '#7c3aed', display: 'flex', alignItems: 'center', gap: '2px' }}>
-                            <Zap size={7} /> Auto
-                          </span>
-                          {overdue && <span style={{ fontSize: '0.55rem', padding: '2px 6px', borderRadius: '6px', background: 'rgba(248,113,113,0.08)', color: '#f87171' }}>Overdue</span>}
-                          <div style={{ marginLeft: 'auto', display: 'flex', gap: '4px' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
                             {(task.status === 'planned' || overdue) && (
                               <button onClick={() => onTriggerAi(task.id)} title="Run AI"
-                                style={{ padding: '3px 8px', borderRadius: '6px', background: 'rgba(124,58,237,0.12)', border: 'none', cursor: 'pointer', color: '#a78bfa', display: 'flex', alignItems: 'center', gap: '3px', fontSize: '0.62rem', fontWeight: 600 }}>
+                                style={{ padding: '4px 8px', borderRadius: '6px', background: 'rgba(124,58,237,0.1)', border: 'none', cursor: 'pointer', color: '#a78bfa', display: 'flex', alignItems: 'center', gap: '3px', fontSize: '0.6rem', fontWeight: 600 }}>
                                 <Play size={9} /> Run
                               </button>
                             )}
                             <button onClick={() => onDeletePlan(task.id)} title="Delete"
-                              style={{ padding: '3px', borderRadius: '6px', background: 'none', border: 'none', cursor: 'pointer', color: '#3f3f46' }}>
+                              style={{ padding: '3px', borderRadius: '6px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
                               <Trash2 size={12} />
                             </button>
                           </div>
                         </div>
                       </motion.div>
                     );
-                  })
-                )}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+                  })}
+                </div>
+              )}
+            </div>
+          </>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', padding: '32px' }}>
+            <Calendar size={36} style={{ color: 'var(--text-muted)', opacity: 0.2, marginBottom: '12px' }} />
+            <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-muted)' }}>Select a day</div>
+            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', opacity: 0.5, marginTop: '4px', textAlign: 'center' }}>Click on a date to view or create tasks.</div>
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
-/* ── Shared Style Helpers ── */
-const navBtnStyle = {
-  background: 'none', border: '1px solid #27272a', borderRadius: '8px',
-  padding: '5px', cursor: 'pointer', color: '#a1a1aa', display: 'flex',
+const navBtn = {
+  background: 'none', border: '1px solid var(--border-color)', borderRadius: '8px',
+  padding: '6px', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex',
   alignItems: 'center', justifyContent: 'center',
 };
 
-const statBadge = (color, bg) => ({
-  fontSize: '0.65rem', color, background: bg,
-  padding: '3px 10px', borderRadius: '999px', fontWeight: 600,
+const badge = (color, bg) => ({
+  fontSize: '0.62rem', color, background: bg,
+  padding: '2px 8px', borderRadius: '999px', fontWeight: 600,
 });
