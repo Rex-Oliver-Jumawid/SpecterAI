@@ -190,15 +190,34 @@ const Editor = React.forwardRef(({ content, onChange, wordCount, documentTitle, 
     }
   }, [activeTab]);
 
-  // Sync external content changes (only if editor is empty, prevents cursor jumping)
+  // Sync external content changes
+  const lastSyncedContent = React.useRef('');
   useEffect(() => {
-    if (editor && content && editor.isEmpty) {
-      const html = formatCitations(markdownToHtml(pages[activeTab] || ''));
-      if (editor.getHTML() !== html) {
-        editor.commands.setContent(html);
+    if (editor && content && content !== lastSyncedContent.current) {
+      const pageContent = pages[activeTab] || '';
+      const html = formatCitations(markdownToHtml(pageContent));
+      const currentHtml = editor.getHTML();
+      // Check if the current editor content has raw [cite: tags that need formatting
+      const hasRawCites = currentHtml.includes('[cite:');
+      if (editor.isEmpty || hasRawCites) {
+        editor.commands.setContent(html || '<p></p>');
+        lastSyncedContent.current = content;
       }
     }
   }, [content, editor]);
+
+  // Re-format citations when references load/change
+  useEffect(() => {
+    if (editor && references && references.length > 0) {
+      const currentHtml = editor.getHTML();
+      if (currentHtml.includes('[cite:')) {
+        const formatted = formatCitations(currentHtml);
+        if (formatted !== currentHtml) {
+          editor.commands.setContent(formatted);
+        }
+      }
+    }
+  }, [references, editor]);
 
   const addPage = () => {
     const newPages = [...pages, '<p></p>'];
