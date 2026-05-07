@@ -180,7 +180,8 @@ function NotebookPage({ notebookId, appState }) {
     handleCreatePlan, handleDeletePlan, handleTriggerAi,
     handleConfirmAi, handleRejectAi,
     chatHistory, handleSendMessage, handleClearChat,
-    loadNotebookById, notebookError
+    loadNotebookById, notebookError,
+    citedRefIds, setCitedRefIds
   } = appState;
 
   const editorRef = useRef(null);
@@ -245,12 +246,7 @@ function NotebookPage({ notebookId, appState }) {
 
   const pendingReviewCount = planList.filter(p => p.status === 'review').length;
 
-  const bibliography = (() => {
-    const matches = [...content.matchAll(/\[cite:([^\]]+)\]/g)];
-    const htmlMatches = [...content.matchAll(/data-cite-id="([^"]+)"/g)];
-    const citedIds = [...new Set([...matches.map(m => m[1]), ...htmlMatches.map(m => m[1])])];
-    return refs.filter(r => citedIds.includes(r.id)).sort((a, b) => (a.authors || '').localeCompare(b.authors || ''));
-  })();
+  const bibliography = refs.filter(r => citedRefIds.includes(r.id)).sort((a, b) => (a.authors || '').localeCompare(b.authors || ''));
 
   // Determine right panel content
   const rightPanelContent = showReview ? 'review' : showRefs ? 'refs' : null;
@@ -396,6 +392,7 @@ function NotebookPage({ notebookId, appState }) {
                                     newContent = newContent.replace(new RegExp(`<span[^>]*data-cite-id="${ref.id}"[^>]*>.*?</span>&nbsp;?`, 'g'), '');
                                     return newContent;
                                   });
+                                  setCitedRefIds(prev => prev.filter(id => id !== ref.id));
                                   handleDeleteReference(ref.id);
                                 }}
                                 title="Remove from bibliography"
@@ -460,6 +457,7 @@ function AppShell() {
   const [loading, setLoading] = useState(true);
   const [notebookError, setNotebookError] = useState(null);
   const [chatHistory, setChatHistory] = useState([]);
+  const [citedRefIds, setCitedRefIds] = useState([]);
   const saveTimerRef = useRef(null);
   const initRef = useRef(false);
   const location = useLocation();
@@ -585,7 +583,14 @@ function AppShell() {
     try { await refsApi.delete(id); setRefs(prev => prev.filter(r => r.id !== id)); } catch (e) { console.error(e); }
   };
   const insertCitation = (refId) => {
-    if (editorRef.current) {
+    const ref = refs.find(r => r.id === refId);
+    if (!ref) return;
+    const authorLast = (ref.authors || 'Unknown').split(',')[0].trim().split(' ').pop();
+    const year = ref.year || 'n.d.';
+    // Add to cited list for bibliography
+    setCitedRefIds(prev => prev.includes(refId) ? prev : [...prev, refId]);
+    // Insert readable text at cursor via editor ref
+    if (editorRef.current && editorRef.current.insertCitation) {
       editorRef.current.insertCitation(refId);
     }
   };
@@ -729,7 +734,8 @@ function AppShell() {
     handleCreatePlan, handleDeletePlan, handleTriggerAi,
     handleConfirmAi, handleRejectAi,
     chatHistory, handleSendMessage, handleClearChat,
-    loadNotebookById, notebookError
+    loadNotebookById, notebookError,
+    citedRefIds, setCitedRefIds
   };
 
   if (loading) {
