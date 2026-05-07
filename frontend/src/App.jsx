@@ -556,24 +556,44 @@ function AppShell() {
   const insertCitation = (refId) => setContent(prev => prev + ' [cite:' + refId + ']');
   const handleCreatePlan = async (data) => {
     if (!notebook) return;
-    try { const p = await plansApi.create(notebook.id, data); setPlanList(prev => [...prev, p]); } catch (e) { console.error(e); }
+    try {
+      const p = await plansApi.create(notebook.id, data);
+      setPlanList(prev => [...prev, p]);
+      setAllPlans(prev => [...prev, p]);
+    } catch (e) { console.error(e); }
   };
   const handleDeletePlan = async (id) => {
-    try { await plansApi.delete(id); setPlanList(prev => prev.filter(p => p.id !== id)); if (selectedPlanId === id) setSelectedPlanId(null); } catch (e) { console.error(e); }
+    try {
+      await plansApi.delete(id);
+      setPlanList(prev => prev.filter(p => p.id !== id));
+      setAllPlans(prev => prev.filter(p => p.id !== id));
+      if (selectedPlanId === id) setSelectedPlanId(null);
+    } catch (e) { console.error(e); }
   };
   const handleTriggerAi = async (id) => {
-    try { const u = await plansApi.trigger(id); setPlanList(prev => prev.map(p => p.id === id ? u : p)); } catch (e) { console.error(e); }
+    try {
+      const u = await plansApi.trigger(id);
+      setPlanList(prev => prev.map(p => p.id === id ? u : p));
+      setAllPlans(prev => prev.map(p => p.id === id ? u : p));
+    } catch (e) { console.error(e); }
   };
   const handleConfirmAi = async (id) => {
     try {
       const u = await plansApi.confirm(id, true);
       setPlanList(prev => prev.map(p => p.id === id ? u : p));
-      const nb = await notebooks.get(notebook.id);
-      setNotebook(nb); setContent(nb.content || '');
+      setAllPlans(prev => prev.map(p => p.id === id ? u : p));
+      if (notebook) {
+        const nb = await notebooks.get(notebook.id);
+        setNotebook(nb); setContent(nb.content || '');
+      }
     } catch (e) { console.error(e); }
   };
   const handleRejectAi = async (id) => {
-    try { const u = await plansApi.confirm(id, false); setPlanList(prev => prev.map(p => p.id === id ? u : p)); } catch (e) { console.error(e); }
+    try {
+      const u = await plansApi.confirm(id, false);
+      setPlanList(prev => prev.map(p => p.id === id ? u : p));
+      setAllPlans(prev => prev.map(p => p.id === id ? u : p));
+    } catch (e) { console.error(e); }
   };
   const handleSendMessage = async (message) => {
     if (!notebook) return;
