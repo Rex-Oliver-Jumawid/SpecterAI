@@ -1,4 +1,5 @@
-const BASE = import.meta.env.VITE_API_URL || '/api';
+let BASE = import.meta.env.VITE_API_URL || '/api';
+if (BASE.endsWith('/')) BASE = BASE.slice(0, -1);
 
 async function request(path, options = {}) {
   const res = await fetch(`${BASE}${path}`, {
