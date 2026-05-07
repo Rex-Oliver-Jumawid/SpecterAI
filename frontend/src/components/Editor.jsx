@@ -2,11 +2,11 @@ import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
-import Table from '@tiptap/extension-table';
-import TableRow from '@tiptap/extension-table-row';
-import TableCell from '@tiptap/extension-table-cell';
-import TableHeader from '@tiptap/extension-table-header';
-import TextAlign from '@tiptap/extension-text-align';
+import { Table } from '@tiptap/extension-table';
+import { TableRow } from '@tiptap/extension-table';
+import { TableCell } from '@tiptap/extension-table';
+import { TableHeader } from '@tiptap/extension-table';
+import { TextAlign } from '@tiptap/extension-text-align';
 import { FiBold, FiItalic, FiUnderline, FiAlignLeft, FiAlignCenter, FiAlignRight, FiList, FiCheck, FiX } from 'react-icons/fi';
 import { TbTablePlus, TbColumnInsertRight, TbRowInsertBottom, TbTableOff } from 'react-icons/tb';
 
