@@ -1,5 +1,6 @@
-export let BASE = import.meta.env.VITE_API_URL || (window.location.hostname.includes('frontend') ? 'https://specter-ai-taupe.vercel.app/api' : '/api');
-if (BASE.endsWith('/')) BASE = BASE.slice(0, -1);
+// Force relative /api path so Vercel rewrites proxy the request to the backend.
+// This completely bypasses Safari's strict CORS and Intelligent Tracking Prevention (ITP).
+export let BASE = '/api';
 
 async function request(path, options = {}) {
   const res = await fetch(`${BASE}${path}`, {
