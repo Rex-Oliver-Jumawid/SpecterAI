@@ -15,6 +15,33 @@ import { notebooks, references as refsApi, plans as plansApi, chat as chatApi } 
 import { FiFileText, FiCheckSquare, FiBookOpen, FiMessageSquare, FiX, FiAlertCircle, FiCheck, FiRotateCcw, FiChevronDown, FiChevronRight } from 'react-icons/fi';
 import './App.css';
 
+// ═══ Global Error Boundary ═══
+class ErrorBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { hasError: false, error: null }; }
+  static getDerivedStateFromError(error) { return { hasError: true, error }; }
+  componentDidCatch(error, info) { console.error('Specter crashed:', error, info); }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100vh', background:'var(--bg-primary)', flexDirection:'column', gap:'16px', padding:'32px', textAlign:'center' }}>
+          <div style={{ fontSize:'2.5rem' }}>👻</div>
+          <h2 style={{ color:'var(--text-primary)', margin:0, fontFamily:'var(--font-serif)' }}>Something went wrong</h2>
+          <p style={{ color:'var(--text-muted)', maxWidth:'400px', lineHeight:1.6, margin:0, fontSize:'0.85rem' }}>
+            Specter hit an unexpected error. This usually means the backend is not reachable or the Supabase environment variables are misconfigured on Vercel.
+          </p>
+          <code style={{ fontSize:'0.7rem', color:'#f87171', background:'rgba(248,113,113,0.1)', padding:'8px 14px', borderRadius:'8px', maxWidth:'480px', wordBreak:'break-all' }}>
+            {this.state.error?.message || 'Unknown error'}
+          </code>
+          <button onClick={() => window.location.replace('/notebooks')} style={{ padding:'10px 24px', borderRadius:'10px', background:'linear-gradient(135deg,#6366f1,#2563eb)', color:'white', border:'none', cursor:'pointer', fontWeight:600, fontSize:'0.85rem' }}>
+            Reload App
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 // ═══ Resize Handle ═══
 function ResizeHandle({ onResize }) {
   const [dragging, setDragging] = useState(false);
@@ -146,7 +173,7 @@ function NotebookPage({ notebookId, appState }) {
     handleCreatePlan, handleDeletePlan, handleTriggerAi,
     handleConfirmAi, handleRejectAi,
     chatHistory, handleSendMessage, handleClearChat,
-    loadNotebookById
+    loadNotebookById, notebookError
   } = appState;
 
   const editorRef = useRef(null);
@@ -213,6 +240,20 @@ function NotebookPage({ notebookId, appState }) {
 
   // Determine right panel content
   const rightPanelContent = showReview ? 'review' : showRefs ? 'refs' : null;
+
+  if (notebookError) {
+    return (
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '16px', padding: '32px', textAlign: 'center' }}>
+        <div style={{ fontSize: '2rem' }}>⚠️</div>
+        <h3 style={{ color: 'var(--text-primary)', margin: 0, fontFamily: 'var(--font-serif)' }}>Failed to load notebook</h3>
+        <p style={{ color: 'var(--text-muted)', maxWidth: '360px', lineHeight: 1.6, margin: 0, fontSize: '0.8rem' }}>{notebookError}</p>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button onClick={() => loadNotebookById(notebookId)} className="btn-specter btn-sm">Retry</button>
+          <button onClick={() => window.location.replace('/notebooks')} className="btn-ghost-outline btn-sm">Back to Notebooks</button>
+        </div>
+      </div>
+    );
+  }
 
   if (!notebook) {
     return (
@@ -378,6 +419,7 @@ function AppShell() {
   const [planList, setPlanList] = useState([]);
   const [selectedPlanId, setSelectedPlanId] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [notebookError, setNotebookError] = useState(null);
   const [chatHistory, setChatHistory] = useState([]);
   const saveTimerRef = useRef(null);
   const initRef = useRef(false);
@@ -403,6 +445,7 @@ function AppShell() {
   }, []);
 
   const loadNotebookById = async (nbId) => {
+    setNotebookError(null);
     try {
       const nb = await notebooks.get(nbId);
       setNotebook(nb);
@@ -415,7 +458,10 @@ function AppShell() {
         const history = await chatApi.history(nb.id);
         setChatHistory(history);
       } catch (e) { setChatHistory([]); }
-    } catch (e) { console.error('Load notebook error:', e); }
+    } catch (e) {
+      console.error('Load notebook error:', e);
+      setNotebookError(e.message || 'Failed to load notebook. Check your backend connection and Supabase environment variables.');
+    }
   };
 
   // Word count
@@ -565,7 +611,7 @@ function AppShell() {
     handleCreatePlan, handleDeletePlan, handleTriggerAi,
     handleConfirmAi, handleRejectAi,
     chatHistory, handleSendMessage, handleClearChat,
-    loadNotebookById
+    loadNotebookById, notebookError
   };
 
   if (loading) {
@@ -632,9 +678,11 @@ function AppShell() {
 
 function App() {
   return (
-    <BrowserRouter>
-      <AppShell />
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <AppShell />
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 }
 
