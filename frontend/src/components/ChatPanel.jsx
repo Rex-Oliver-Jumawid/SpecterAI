@@ -13,7 +13,7 @@ export default function ChatPanel({
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [chatHistory, pendingEdit]);
+  }, [chatHistory, hasPendingEdit]);
 
   useEffect(() => {
     if (isOpen) {
