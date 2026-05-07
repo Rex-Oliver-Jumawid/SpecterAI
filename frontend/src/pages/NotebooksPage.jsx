@@ -270,10 +270,9 @@ export default function NotebooksPage({ allNotebooks, onCreateNotebook, onDelete
                         onClick={(e) => handleDelete(e, nb.id)}
                         style={{
                           background: 'none', border: 'none', cursor: 'pointer',
-                          color: 'var(--text-muted)', padding: '4px', borderRadius: '4px',
-                          opacity: 0, transition: 'opacity 0.2s'
+                          color: '#ef4444', padding: '4px', borderRadius: '4px',
+                          opacity: 0.6, transition: 'opacity 0.2s'
                         }}
-                        className="group-hover-visible"
                         title="Delete notebook"
                       >
                         <FiTrash2 size={13} />
