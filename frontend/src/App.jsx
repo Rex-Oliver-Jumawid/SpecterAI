@@ -434,7 +434,7 @@ function AppShell() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    document.documentElement.classList.toggle('dark', darkMode);
+    document.documentElement.classList.toggle('light', !darkMode);
     localStorage.setItem('specter_theme', darkMode ? 'dark' : 'light');
   }, [darkMode]);
 
@@ -504,12 +504,17 @@ function AppShell() {
     return () => window.removeEventListener('keydown', h);
   }, [content, title, notebook]);
 
-  // Deadline auto-trigger
+  // Deadline auto-trigger (always on — 5 min grace period)
   useEffect(() => {
     const iv = setInterval(() => {
+      const now = new Date();
       planList.forEach(p => {
-        if (p.scheduled_date && new Date(p.scheduled_date) < new Date() && p.status === 'planned') {
-          if (p.auto_start == 1 || p.auto_start === true) handleTriggerAi(p.id);
+        if (p.scheduled_date && p.status === 'planned') {
+          const deadline = new Date(p.scheduled_date);
+          const gracePeriod = 5 * 60 * 1000; // 5 minutes
+          if (now.getTime() - deadline.getTime() >= gracePeriod) {
+            handleTriggerAi(p.id);
+          }
         }
       });
     }, 30000);

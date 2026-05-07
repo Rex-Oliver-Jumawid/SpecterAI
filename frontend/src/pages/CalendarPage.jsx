@@ -13,7 +13,7 @@ export default function CalendarPage({ plans, onCreatePlanForNotebook, onDeleteP
   const [outputType, setOutputType] = useState('draft');
   const [wordTarget, setWordTarget] = useState(500);
   const [scheduledTime, setScheduledTime] = useState('09:00');
-  const [autoStart, setAutoStart] = useState(false);
+
   const [preFetchRefs, setPreFetchRefs] = useState(false);
   const [instructions, setInstructions] = useState('');
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -104,7 +104,7 @@ export default function CalendarPage({ plans, onCreatePlanForNotebook, onDeleteP
       output_type: preFetchRefs ? 'references_only' : outputType,
       word_target: wordTarget,
       scheduled_date: `${y2}-${m2}-${d2}T${scheduledTime}`,
-      scheduled_time: scheduledTime, auto_start: autoStart,
+      scheduled_time: scheduledTime, auto_start: true,
       pre_fetch_refs: preFetchRefs, instructions: instructions.trim()
     });
     setTitle(''); setOutline(''); setInstructions('');
@@ -303,14 +303,14 @@ export default function CalendarPage({ plans, onCreatePlanForNotebook, onDeleteP
                         <input type="time" value={scheduledTime} onChange={e => setScheduledTime(e.target.value)}
                           style={{ flex: 1, padding: '8px', borderRadius: '10px', border: '1px solid #323232', background: '#0a0a0a', color: '#d4d4d8', fontSize: '0.75rem' }} />
                       </div>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.72rem', color: '#a1a1aa' }}>
-                        <input type="checkbox" checked={autoStart} onChange={e => setAutoStart(e.target.checked)} style={{ accentColor: '#7c3aed' }} />
-                        <Zap size={12} style={{ color: '#7c3aed' }} /> Auto-start at deadline
-                      </label>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 10px', borderRadius: '10px', background: 'rgba(124,58,237,0.08)', border: '1px solid rgba(124,58,237,0.15)' }}>
+                        <Zap size={12} style={{ color: '#a78bfa' }} />
+                        <span style={{ fontSize: '0.68rem', color: '#a78bfa', fontWeight: 500 }}>AI auto-starts 5 min after deadline</span>
+                      </div>
                       <div style={{ display: 'flex', gap: '8px' }}>
                         <button onClick={handleCreate} disabled={!title.trim() || !selectedNotebookId}
                           style={{ flex: 1, padding: '10px', borderRadius: '10px', background: 'linear-gradient(135deg, #7c3aed, #6366f1)', color: 'white', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '0.78rem', opacity: (!title.trim() || !selectedNotebookId) ? 0.5 : 1 }}>
-                          {autoStart ? '⚡ Create & Auto-start' : 'Create Task'}
+                          ⚡ Schedule Task
                         </button>
                         <button onClick={() => setShowForm(false)}
                           style={{ padding: '10px 16px', borderRadius: '10px', border: '1px solid #323232', background: 'transparent', color: '#a1a1aa', cursor: 'pointer', fontSize: '0.78rem' }}>
@@ -373,11 +373,9 @@ export default function CalendarPage({ plans, onCreatePlanForNotebook, onDeleteP
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                               <span style={{ fontSize: '0.62rem', padding: '2px 8px', borderRadius: '999px', background: st.bg, color: st.color, fontWeight: 600 }}>{st.label}</span>
                               <span style={{ fontSize: '0.6rem', color: '#71717a' }}>{task.word_target} words</span>
-                              {(task.auto_start === 1 || task.auto_start === true) && (
-                                <span style={{ fontSize: '0.58rem', padding: '2px 6px', borderRadius: '6px', background: 'rgba(124,58,237,0.1)', color: '#a78bfa', display: 'flex', alignItems: 'center', gap: '2px' }}>
-                                  <Zap size={8} /> Auto
-                                </span>
-                              )}
+                              <span style={{ fontSize: '0.58rem', padding: '2px 6px', borderRadius: '6px', background: 'rgba(124,58,237,0.1)', color: '#a78bfa', display: 'flex', alignItems: 'center', gap: '2px' }}>
+                                <Zap size={8} /> Auto
+                              </span>
                               {overdue && <span style={{ fontSize: '0.58rem', padding: '2px 6px', borderRadius: '6px', background: 'rgba(248,113,113,0.1)', color: '#f87171' }}>Overdue</span>}
                               <div style={{ marginLeft: 'auto', display: 'flex', gap: '4px' }}>
                                 {(task.status === 'planned' || overdue) && (

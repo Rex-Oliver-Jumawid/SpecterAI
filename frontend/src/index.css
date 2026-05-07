@@ -41,6 +41,40 @@
 
 /* ═══ CSS Variables for Theming ═══ */
 :root {
+  --bg-primary: #0a0a0a;
+  --bg-secondary: #111111;
+  --bg-tertiary: #1a1a1a;
+  --bg-hover: #222222;
+  --bg-card: #161616;
+  --bg-input: #0e0e0e;
+  --bg-header: rgba(10, 10, 10, 0.88);
+  --bg-overlay: rgba(10, 10, 10, 0.65);
+
+  --text-primary: #e4e4e7;
+  --text-secondary: #a1a1aa;
+  --text-tertiary: #71717a;
+  --text-muted: #52525b;
+
+  --border-color: rgba(255, 255, 255, 0.06);
+  --border-hover: rgba(255, 255, 255, 0.12);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.5);
+
+  --accent-bg: rgba(124, 58, 237, 0.1);
+  --accent-border: rgba(124, 58, 237, 0.2);
+
+  /* Sidebar */
+  --sidebar-bg: #0a0a0a;
+  --sidebar-border: rgba(255, 255, 255, 0.06);
+  --sidebar-hover: rgba(255, 255, 255, 0.05);
+  --sidebar-text: #e4e4e7;
+  --sidebar-link: #71717a;
+  --sidebar-link-hover: #d4d4d8;
+}
+
+/* Light mode override (only if user picks light) */
+html.light {
   --bg-primary: #f8f7ff;
   --bg-secondary: #ffffff;
   --bg-tertiary: #f0eef8;
@@ -64,46 +98,12 @@
   --accent-bg: oklch(0.55 0.22 275 / 0.08);
   --accent-border: oklch(0.55 0.22 275 / 0.15);
 
-  /* Sidebar */
   --sidebar-bg: #f5f3fc;
   --sidebar-border: rgba(100, 80, 160, 0.1);
   --sidebar-hover: rgba(100, 80, 160, 0.06);
   --sidebar-text: #1a1625;
   --sidebar-link: #6b6080;
   --sidebar-link-hover: #3d3555;
-}
-
-html.dark {
-  --bg-primary: #0c0a14;
-  --bg-secondary: #12101e;
-  --bg-tertiary: #18152a;
-  --bg-hover: #1e1a32;
-  --bg-card: #15132a;
-  --bg-input: #0e0c1a;
-  --bg-header: rgba(12, 10, 20, 0.85);
-  --bg-overlay: rgba(12, 10, 20, 0.65);
-
-  --text-primary: #e8e4f0;
-  --text-secondary: #b0a8c8;
-  --text-tertiary: #78708f;
-  --text-muted: #4a4462;
-
-  --border-color: rgba(255, 255, 255, 0.05);
-  --border-hover: rgba(255, 255, 255, 0.1);
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.2);
-  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.3);
-  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.4);
-
-  --accent-bg: oklch(0.55 0.22 275 / 0.1);
-  --accent-border: oklch(0.55 0.22 275 / 0.2);
-
-  /* Sidebar */
-  --sidebar-bg: #0a0910;
-  --sidebar-border: rgba(255, 255, 255, 0.04);
-  --sidebar-hover: rgba(255, 255, 255, 0.04);
-  --sidebar-text: #e0dce8;
-  --sidebar-link: #5c566e;
-  --sidebar-link-hover: #a09ab0;
 }
 
 /* ═══ Keyframes ═══ */
