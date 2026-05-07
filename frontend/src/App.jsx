@@ -66,7 +66,7 @@ function ResizeHandle({ onResize }) {
 }
 
 // ═══ Review Panel (inside notebook) ═══
-function ReviewPanel({ plans, onConfirmAi, onRejectAi, onClose }) {
+function ReviewPanel({ plans, onConfirmAi, onRejectAi, onReviewInEditor, onClose }) {
   const [expandedDoneId, setExpandedDoneId] = useState(null);
   const reviewablePlans = plans.filter(p => p.status === 'review' || p.status === 'done');
   const pendingReview = reviewablePlans.filter(p => p.status === 'review');
@@ -117,8 +117,8 @@ function ReviewPanel({ plans, onConfirmAi, onRejectAi, onClose }) {
                   </div>
                 )}
                 <div style={{ display: 'flex', gap: '6px', marginTop: '10px' }}>
-                  <button onClick={() => onConfirmAi(plan.id)} className="btn-specter btn-sm" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
-                    <FiCheck size={12} /> Accept
+                  <button onClick={() => onReviewInEditor(plan)} className="btn-specter btn-sm" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+                    <FiBookOpen size={12} /> Review in Editor
                   </button>
                   <button onClick={() => onRejectAi(plan.id)} className="btn-ghost-outline btn-sm" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
                     <FiRotateCcw size={12} /> Redo
@@ -192,18 +192,24 @@ function NotebookPage({ notebookId, appState }) {
   // When AI returns an edit, we show it directly in the Editor as a diff
   const [pendingEdit, setPendingEdit] = useState(null);
 
-  const handleEditProposed = useCallback(({ newContent, description }) => {
+  const handleEditProposed = useCallback(({ newContent, description, planId }) => {
     setPendingEdit({
       originalContent: content,
       newContent,
-      description: description || 'AI suggested changes to your document.'
+      description: description || 'AI suggested changes to your document.',
+      planId
     });
   }, [content]);
 
   const handleAcceptEdit = useCallback(() => {
-    if (pendingEdit) setContent(pendingEdit.newContent);
+    if (pendingEdit) {
+      setContent(pendingEdit.newContent);
+      if (pendingEdit.planId) {
+        handleConfirmAi(pendingEdit.planId);
+      }
+    }
     setPendingEdit(null);
-  }, [pendingEdit, setContent]);
+  }, [pendingEdit, setContent, handleConfirmAi]);
 
   const handleRejectEdit = useCallback(() => {
     setPendingEdit(null);
@@ -377,6 +383,7 @@ function NotebookPage({ notebookId, appState }) {
                 </>
               ) : (
                 <ReviewPanel plans={planList} onConfirmAi={handleConfirmAi} onRejectAi={handleRejectAi}
+                  onReviewInEditor={(plan) => handleEditProposed({ newContent: plan.ai_output, description: 'Reviewing Task: ' + plan.title, planId: plan.id })}
                   onClose={() => setShowReview(false)} />
               )}
             </aside>
@@ -502,7 +509,7 @@ function AppShell() {
     const iv = setInterval(() => {
       planList.forEach(p => {
         if (p.scheduled_date && new Date(p.scheduled_date) < new Date() && p.status === 'planned') {
-          if (p.auto_start === 1) handleTriggerAi(p.id);
+          if (p.auto_start == 1 || p.auto_start === true) handleTriggerAi(p.id);
         }
       });
     }, 30000);
