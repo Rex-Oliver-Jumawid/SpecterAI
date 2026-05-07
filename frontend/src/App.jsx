@@ -631,6 +631,18 @@ function AppShell() {
       alert(`Failed to delete notebook: ${e.message}`);
     }
   };
+  const handleRenameNotebook = async (id, newTitle) => {
+    try {
+      await notebooks.update(id, { title: newTitle });
+      setAllNotebooks(prev => prev.map(n => n.id === id ? { ...n, title: newTitle } : n));
+      if (notebook?.id === id) {
+        setNotebook(prev => ({ ...prev, title: newTitle }));
+        setTitle(newTitle);
+      }
+    } catch (e) {
+      console.error('Rename notebook failed:', e);
+    }
+  };
 
   // Save reference to a specific notebook (used by ReferencesPage Discover tab)
   const handleAddReferenceToNotebook = async (nbId, data) => {
@@ -694,6 +706,7 @@ function AppShell() {
             <NotebooksPage allNotebooks={allNotebooks}
               onCreateNotebook={handleCreateNotebook}
               onDeleteNotebook={handleDeleteNotebook}
+              onRenameNotebook={handleRenameNotebook}
               onSelectNotebook={(id) => navigate(`/notebooks/${id}`)}
               currentNotebookId={notebook?.id} />
           } />
@@ -705,6 +718,7 @@ function AppShell() {
             <NotebooksPage allNotebooks={allNotebooks}
               onCreateNotebook={handleCreateNotebook}
               onDeleteNotebook={handleDeleteNotebook}
+              onRenameNotebook={handleRenameNotebook}
               onSelectNotebook={(id) => navigate(`/notebooks/${id}`)}
               currentNotebookId={notebook?.id} />
           } />
@@ -725,6 +739,7 @@ function AppShell() {
             <NotebooksPage allNotebooks={allNotebooks}
               onCreateNotebook={handleCreateNotebook}
               onDeleteNotebook={handleDeleteNotebook}
+              onRenameNotebook={handleRenameNotebook}
               onSelectNotebook={(id) => navigate(`/notebooks/${id}`)}
               currentNotebookId={notebook?.id} />
           } />

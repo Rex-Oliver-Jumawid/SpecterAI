@@ -7,8 +7,9 @@ import { TableRow } from '@tiptap/extension-table';
 import { TableCell } from '@tiptap/extension-table';
 import { TableHeader } from '@tiptap/extension-table';
 import { TextAlign } from '@tiptap/extension-text-align';
-import { FiBold, FiItalic, FiUnderline, FiAlignLeft, FiAlignCenter, FiAlignRight, FiList, FiCheck, FiX } from 'react-icons/fi';
+import { FiBold, FiItalic, FiUnderline, FiAlignLeft, FiAlignCenter, FiAlignRight, FiList, FiCheck, FiX, FiDownload } from 'react-icons/fi';
 import { TbTablePlus, TbColumnInsertRight, TbRowInsertBottom, TbTableOff } from 'react-icons/tb';
+import html2pdf from 'html2pdf.js';
 
 const MenuBar = ({ editor }) => {
   if (!editor) return null;
@@ -91,6 +92,7 @@ const Editor = React.forwardRef(({ content, onChange, wordCount, documentTitle, 
   const [tabNames, setTabNames] = useState(['Page 1']);
   const [editingTabIdx, setEditingTabIdx] = useState(null);
   const [editingTabName, setEditingTabName] = useState('');
+  const [showDownloadMenu, setShowDownloadMenu] = useState(false);
 
   // Parse pages from content
   const pages = useMemo(() => {
@@ -98,6 +100,35 @@ const Editor = React.forwardRef(({ content, onChange, wordCount, documentTitle, 
     const parts = content.split(PAGE_DELIMITER);
     return parts.length > 0 ? parts : [''];
   }, [content]);
+
+  // PDF Download
+  const downloadPdf = useCallback((allPages = false) => {
+    setShowDownloadMenu(false);
+    const container = document.createElement('div');
+    container.style.cssText = 'font-family: "Lora", Georgia, serif; font-size: 12pt; line-height: 1.8; color: #1a1a1a; padding: 0;';
+    
+    if (allPages) {
+      pages.forEach((pageContent, idx) => {
+        const pageDiv = document.createElement('div');
+        if (idx > 0) pageDiv.style.pageBreakBefore = 'always';
+        pageDiv.innerHTML = pageContent || '<p>(Empty page)</p>';
+        container.appendChild(pageDiv);
+      });
+    } else {
+      container.innerHTML = pages[activeTab] || '<p>(Empty page)</p>';
+    }
+
+    const fileName = `${documentTitle || 'Untitled'}${allPages ? ' (All Pages)' : ` - Page ${activeTab + 1}`}.pdf`;
+    
+    html2pdf().set({
+      margin: [20, 20, 20, 20],
+      filename: fileName,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      pagebreak: { mode: ['css', 'legacy'] }
+    }).from(container).save();
+  }, [pages, activeTab, documentTitle]);
 
   // Initialize tab names from page count
   useEffect(() => {
@@ -347,12 +378,65 @@ const Editor = React.forwardRef(({ content, onChange, wordCount, documentTitle, 
             fontFamily: 'var(--font-sans)', letterSpacing: '-0.02em', marginBottom: '8px'
           }}
         />
-        <div style={{ display: 'flex', gap: '16px', color: 'var(--text-muted)', fontSize: '0.75rem' }}>
+        <div style={{ display: 'flex', gap: '16px', color: 'var(--text-muted)', fontSize: '0.75rem', alignItems: 'center' }}>
           <span>{wordCount} words</span>
           <span>·</span>
           <span>{Math.ceil(wordCount / 200)} min read</span>
           <span>·</span>
           <span>Page {activeTab + 1} of {pages.length}</span>
+          <div style={{ marginLeft: 'auto', position: 'relative' }}>
+            <button
+              onClick={() => setShowDownloadMenu(!showDownloadMenu)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '5px',
+                padding: '5px 12px', borderRadius: '6px', border: '1px solid var(--border-color)',
+                background: 'var(--bg-tertiary)', color: 'var(--text-secondary)',
+                cursor: 'pointer', fontSize: '0.72rem', fontWeight: 600,
+                fontFamily: 'var(--font-sans)', transition: 'all 0.2s'
+              }}
+            >
+              <FiDownload size={13} /> PDF
+            </button>
+            {showDownloadMenu && (
+              <div style={{
+                position: 'absolute', top: '100%', right: 0, marginTop: '4px',
+                background: 'var(--bg-card)', border: '1px solid var(--border-color)',
+                borderRadius: '8px', boxShadow: '0 8px 30px rgba(0,0,0,0.25)',
+                overflow: 'hidden', zIndex: 50, minWidth: '180px'
+              }}>
+                <button
+                  onClick={() => downloadPdf(false)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '8px', width: '100%',
+                    padding: '10px 14px', border: 'none', background: 'none',
+                    color: 'var(--text-primary)', cursor: 'pointer', fontSize: '0.78rem',
+                    fontFamily: 'var(--font-sans)', textAlign: 'left',
+                    transition: 'background 0.15s'
+                  }}
+                  onMouseEnter={e => e.target.style.background = 'var(--bg-tertiary)'}
+                  onMouseLeave={e => e.target.style.background = 'none'}
+                >
+                  📄 Current Page
+                </button>
+                {pages.length > 1 && (
+                  <button
+                    onClick={() => downloadPdf(true)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '8px', width: '100%',
+                      padding: '10px 14px', border: 'none', background: 'none',
+                      color: 'var(--text-primary)', cursor: 'pointer', fontSize: '0.78rem',
+                      fontFamily: 'var(--font-sans)', textAlign: 'left',
+                      transition: 'background 0.15s'
+                    }}
+                    onMouseEnter={e => e.target.style.background = 'var(--bg-tertiary)'}
+                    onMouseLeave={e => e.target.style.background = 'none'}
+                  >
+                    📑 All Pages ({pages.length})
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

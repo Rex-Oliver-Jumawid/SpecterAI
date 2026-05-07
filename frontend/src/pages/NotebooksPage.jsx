@@ -2,11 +2,19 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiPlus, FiTrash2, FiEdit3, FiClock, FiFileText, FiBookOpen, FiLayers } from 'react-icons/fi';
 
-export default function NotebooksPage({ allNotebooks, onCreateNotebook, onDeleteNotebook, onSelectNotebook, currentNotebookId }) {
+export default function NotebooksPage({ allNotebooks, onCreateNotebook, onDeleteNotebook, onSelectNotebook, onRenameNotebook, currentNotebookId }) {
   const [showCreate, setShowCreate] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [editingId, setEditingId] = useState(null);
+  const [editTitle, setEditTitle] = useState('');
   const navigate = useNavigate();
+
+  const handleRename = async (id) => {
+    if (!editTitle.trim()) { setEditingId(null); return; }
+    if (onRenameNotebook) await onRenameNotebook(id, editTitle.trim());
+    setEditingId(null);
+  };
 
   const handleCreate = async () => {
     if (!newTitle.trim()) return;
@@ -176,12 +184,29 @@ export default function NotebooksPage({ allNotebooks, onCreateNotebook, onDelete
                       }} />
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <h3 style={{
-                        fontSize: '0.95rem', fontWeight: 700, margin: 0,
-                        color: 'var(--text-primary)', lineHeight: 1.3
-                      }} className="line-clamp-1">
-                        {nb.title || 'Untitled Notebook'}
-                      </h3>
+                      {editingId === nb.id ? (
+                        <input
+                          value={editTitle}
+                          onChange={e => setEditTitle(e.target.value)}
+                          onKeyDown={e => { if (e.key === 'Enter') handleRename(nb.id); if (e.key === 'Escape') setEditingId(null); }}
+                          onBlur={() => handleRename(nb.id)}
+                          onClick={e => e.stopPropagation()}
+                          autoFocus
+                          style={{
+                            fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)',
+                            background: 'var(--bg-tertiary)', border: '1px solid var(--color-specter-400)',
+                            borderRadius: '4px', padding: '2px 6px', width: '100%',
+                            outline: 'none', fontFamily: 'var(--font-sans)'
+                          }}
+                        />
+                      ) : (
+                        <h3 style={{
+                          fontSize: '0.95rem', fontWeight: 700, margin: 0,
+                          color: 'var(--text-primary)', lineHeight: 1.3
+                        }} className="line-clamp-1">
+                          {nb.title || 'Untitled Notebook'}
+                        </h3>
+                      )}
                       <p style={{
                         fontSize: '0.72rem', color: 'var(--text-muted)',
                         margin: '3px 0 0', display: 'flex', alignItems: 'center', gap: '4px'
@@ -229,6 +254,18 @@ export default function NotebooksPage({ allNotebooks, onCreateNotebook, onDelete
                       </span>
                     )}
                     <div style={{ flex: 1 }} />
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setEditingId(nb.id); setEditTitle(nb.title || ''); }}
+                      style={{
+                        background: 'none', border: 'none', cursor: 'pointer',
+                        color: 'var(--text-muted)', padding: '4px', borderRadius: '4px',
+                        opacity: 0, transition: 'opacity 0.2s'
+                      }}
+                      className="group-hover-visible"
+                      title="Rename notebook"
+                    >
+                      <FiEdit3 size={13} />
+                    </button>
                     {allNotebooks.length > 1 && (
                       <button
                         onClick={(e) => handleDelete(e, nb.id)}
