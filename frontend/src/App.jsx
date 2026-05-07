@@ -514,7 +514,10 @@ function AppShell() {
       const nb = await notebooks.create({ title: titleStr });
       setAllNotebooks(prev => [nb, ...prev]);
       navigate(`/notebooks/${nb.id}`);
-    } catch (e) { console.error(e); }
+    } catch (e) { 
+      console.error('Create notebook failed:', e);
+      alert(`Failed to create notebook: ${e.message}. \n\nIf you are on Vercel, ensure VITE_API_URL is set to your backend URL in the project environment variables.`);
+    }
   };
   const handleDeleteNotebook = async (id) => {
     try {
@@ -522,7 +525,10 @@ function AppShell() {
       const remaining = allNotebooks.filter(n => n.id !== id);
       setAllNotebooks(remaining);
       if (notebook?.id === id) setNotebook(null);
-    } catch (e) { console.error(e); }
+    } catch (e) { 
+      console.error('Delete notebook failed:', e);
+      alert(`Failed to delete notebook: ${e.message}`);
+    }
   };
 
   // Save reference to a specific notebook (used by ReferencesPage Discover tab)
