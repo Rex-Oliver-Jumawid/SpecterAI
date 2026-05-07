@@ -341,6 +341,7 @@ textarea.input-specter { resize: vertical; min-height: 60px; }
 .editor-wrapper {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   background: var(--bg-tertiary);
   display: flex;
   flex-direction: column;
@@ -353,11 +354,16 @@ textarea.input-specter { resize: vertical; min-height: 60px; }
   width: 100%;
   max-width: 816px;
   min-height: 1056px;
+  height: auto;
   padding: 72px 72px;
   box-shadow: 0 1px 8px rgba(0,0,0,0.15), 0 0 1px rgba(0,0,0,0.1);
   border: 1px solid var(--border-color);
   border-radius: 2px;
   position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
 }
 
 /* Page number indicator */
@@ -374,6 +380,9 @@ textarea.input-specter { resize: vertical; min-height: 60px; }
   line-height: 1.8;
   color: var(--text-primary);
   min-height: 800px;
+  flex: 1;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .ProseMirror:focus {
