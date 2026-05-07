@@ -8,6 +8,7 @@ export default function ChatPanel({
 }) {
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
+  const [mode, setMode] = useState('write');
   const [isMinimized, setIsMinimized] = useState(false);
   const [pos, setPos] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
@@ -55,7 +56,7 @@ export default function ChatPanel({
     setMessage('');
     setSending(true);
     try {
-      const result = await onSendMessage(msg);
+      const result = await onSendMessage(msg, mode);
       // Check if AI response contains an edit block — push directly to editor
       if (result?.aiMessage?.content) {
         const editMatch = result.aiMessage.content.match(/```edit\n([\s\S]*?)```/);
@@ -72,14 +73,25 @@ export default function ChatPanel({
     finally { setSending(false); }
   };
 
-  const quickPrompts = [
-    { icon: '📚', label: 'Write with references', msg: 'Write a paragraph about my topic using my saved references as context. Include proper citations from the sources.' },
-    { icon: '✍️', label: 'Improve my writing', msg: 'Read my current document and improve the writing style, grammar, and clarity. Return the improved version.' },
+  const writePrompts = [
+    { icon: '📚', label: 'Write with refs', msg: 'Write a paragraph about my topic using my saved references as context. Include proper citations from the sources.' },
+    { icon: '✍️', label: 'Improve writing', msg: 'Read my current document and improve the writing style, grammar, and clarity. Return the improved version.' },
     { icon: '📝', label: 'Continue writing', msg: 'Read my current document and continue writing where I left off, maintaining the same tone and style.' },
-    { icon: '🤖', label: 'Check if AI-written', msg: 'Analyze my current document and check which parts might appear AI-generated. Give me a confidence score and suggestions to make it more authentic.' },
+    { icon: '🤖', label: 'AI detection', msg: 'Analyze my current document and check which parts might appear AI-generated. Give me a confidence score and suggestions to make it more authentic.' },
     { icon: '📋', label: 'Create outline', msg: 'Read my current document and suggest a structured outline for the rest of the paper.' },
     { icon: '📖', label: 'Add introduction', msg: 'Write a strong introduction paragraph for my paper based on the current content and my saved references.' },
   ];
+
+  const askPrompts = [
+    { icon: '💡', label: 'Explain a concept', msg: 'What is machine learning and how does it work?' },
+    { icon: '🔍', label: 'Compare topics', msg: 'What is the difference between qualitative and quantitative research?' },
+    { icon: '📊', label: 'Research methods', msg: 'How to conduct a literature review?' },
+    { icon: '🧠', label: 'About my paper', msg: 'What is my document about? Give me a summary.' },
+    { icon: '📝', label: 'Citation help', msg: 'How to properly cite sources in APA format?' },
+    { icon: '🎓', label: 'Study tips', msg: 'What are effective strategies for academic writing?' },
+  ];
+
+  const quickPrompts = mode === 'ask' ? askPrompts : writePrompts;
 
   const formatContent = (text) => {
     return text
@@ -171,18 +183,55 @@ export default function ChatPanel({
           </div>
         </div>
 
-        {/* Context indicator */}
+        {/* Context indicator + Mode toggle */}
         {!isMinimized && (
-          <div style={{
-          marginTop: '10px', padding: '6px 10px', borderRadius: '6px',
-          background: 'var(--bg-card)', border: '1px solid var(--border-color)',
-          display: 'flex', alignItems: 'center', gap: '6px',
-          fontSize: '0.68rem', color: 'var(--text-muted)'
-        }}>
-          <FiFileText size={12} style={{ color: '#3b82f6' }} />
-          <span>Document context: <strong style={{ color: 'var(--text-secondary)' }}>{contentWordCount} words</strong></span>
-          <span style={{ marginLeft: 'auto', color: '#3b82f6', fontWeight: 600 }}>Live</span>
-        </div>
+          <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div style={{
+              padding: '6px 10px', borderRadius: '6px',
+              background: 'var(--bg-card)', border: '1px solid var(--border-color)',
+              display: 'flex', alignItems: 'center', gap: '6px',
+              fontSize: '0.68rem', color: 'var(--text-muted)'
+            }}>
+              <FiFileText size={12} style={{ color: '#3b82f6' }} />
+              <span>Document context: <strong style={{ color: 'var(--text-secondary)' }}>{contentWordCount} words</strong></span>
+              <span style={{ marginLeft: 'auto', color: '#3b82f6', fontWeight: 600 }}>Live</span>
+            </div>
+
+            {/* Ask / Write Toggle */}
+            <div style={{
+              display: 'flex', borderRadius: '8px', overflow: 'hidden',
+              border: '1px solid var(--border-color)', background: 'var(--bg-card)'
+            }}>
+              <button
+                onClick={() => setMode('ask')}
+                className="no-drag"
+                style={{
+                  flex: 1, padding: '7px 0', border: 'none', cursor: 'pointer',
+                  fontSize: '0.72rem', fontWeight: 600, fontFamily: 'var(--font-sans)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px',
+                  background: mode === 'ask' ? 'linear-gradient(135deg, #7c3aed, #6d28d9)' : 'transparent',
+                  color: mode === 'ask' ? 'white' : 'var(--text-muted)',
+                  transition: 'all 0.2s',
+                }}
+              >
+                💬 Ask
+              </button>
+              <button
+                onClick={() => setMode('write')}
+                className="no-drag"
+                style={{
+                  flex: 1, padding: '7px 0', border: 'none', cursor: 'pointer',
+                  fontSize: '0.72rem', fontWeight: 600, fontFamily: 'var(--font-sans)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px',
+                  background: mode === 'write' ? 'linear-gradient(135deg, #2563eb, #1d4ed8)' : 'transparent',
+                  color: mode === 'write' ? 'white' : 'var(--text-muted)',
+                  transition: 'all 0.2s',
+                }}
+              >
+                ✏️ Write
+              </button>
+            </div>
+          </div>
         )}
       </div>
 
@@ -211,7 +260,7 @@ export default function ChatPanel({
             {/* Quick prompts */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
               {quickPrompts.map((qp, i) => (
-                <button key={i} onClick={() => { setMessage(qp.msg); setTimeout(() => inputRef.current?.focus(), 50); }}
+                <button key={i} onClick={() => { setMode('write'); setMessage(qp.msg); setTimeout(() => inputRef.current?.focus(), 50); }}
                   style={{
                     display: 'flex', alignItems: 'center', gap: '6px',
                     padding: '8px 10px', borderRadius: '8px',
@@ -319,6 +368,42 @@ export default function ChatPanel({
         background: 'var(--bg-tertiary)',
         flexShrink: 0
       }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+          <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            Mode
+          </span>
+          <div style={{ display: 'flex', gap: '6px' }}>
+            <button
+              type="button"
+              onClick={() => setMode('ask')}
+              style={{
+                padding: '4px 10px', borderRadius: '999px',
+                border: mode === 'ask' ? '1px solid #2563eb' : '1px solid var(--border-color)',
+                background: mode === 'ask' ? 'linear-gradient(135deg, #2563eb, #1d4ed8)' : 'var(--bg-card)',
+                color: mode === 'ask' ? 'white' : 'var(--text-muted)',
+                fontSize: '0.62rem', fontWeight: 700, cursor: 'pointer'
+              }}
+            >
+              Ask
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode('write')}
+              style={{
+                padding: '4px 10px', borderRadius: '999px',
+                border: mode === 'write' ? '1px solid #2563eb' : '1px solid var(--border-color)',
+                background: mode === 'write' ? 'linear-gradient(135deg, #2563eb, #1d4ed8)' : 'var(--bg-card)',
+                color: mode === 'write' ? 'white' : 'var(--text-muted)',
+                fontSize: '0.62rem', fontWeight: 700, cursor: 'pointer'
+              }}
+            >
+              Write
+            </button>
+          </div>
+          <span style={{ marginLeft: 'auto', fontSize: '0.62rem', color: 'var(--text-muted)' }}>
+            {mode === 'ask' ? 'Answers questions' : 'Edits your document'}
+          </span>
+        </div>
         <div style={{
           display: 'flex', gap: '8px', alignItems: 'flex-end',
           background: 'var(--bg-input)',
@@ -337,7 +422,7 @@ export default function ChatPanel({
                 handleSend();
               }
             }}
-            placeholder="Ask Specter to edit your doc..."
+            placeholder={mode === 'ask' ? 'Ask a question...' : 'Ask Specter to edit your doc...'}
             rows={1}
             style={{
               flex: 1, border: 'none', outline: 'none', resize: 'none',
@@ -361,7 +446,7 @@ export default function ChatPanel({
           </button>
         </div>
         <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', textAlign: 'center', marginTop: '6px' }}>
-          Enter to send · Shift+Enter for new line · AI reads your document live
+          {mode === 'ask' ? '💬 Ask mode — answers questions' : '✏️ Write mode — edits your document'} · Enter to send
         </div>
       </div>
       </>

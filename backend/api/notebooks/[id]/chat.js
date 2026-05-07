@@ -1,6 +1,6 @@
 import { setCors } from '../../../lib/cors.js';
 import supabase from '../../../lib/supabase.js';
-import { generateId, generateChatResponse } from '../../../lib/ai.js';
+import { generateId, generateChatResponse, generateAskResponse } from '../../../lib/ai.js';
 
 export default async function handler(req, res) {
   if (setCors(req, res)) return;
@@ -26,7 +26,7 @@ export default async function handler(req, res) {
   // POST /api/notebooks/:id/chat — send message, get AI response
   if (req.method === 'POST') {
     try {
-      const { message } = req.body || {};
+      const { message, mode } = req.body || {};
 
       if (!message || !message.trim()) {
         return res.status(400).json({ error: 'Message is required' });
@@ -54,7 +54,10 @@ export default async function handler(req, res) {
         .eq('notebook_id', notebookId);
 
       // Generate AI response
-      const aiResponse = generateChatResponse(message.trim(), notebook?.content, refs || []);
+      const normalizedMode = (mode || 'write').toLowerCase();
+      const aiResponse = normalizedMode === 'ask'
+        ? generateAskResponse(message.trim(), notebook?.content, refs || [])
+        : generateChatResponse(message.trim(), notebook?.content, refs || []);
 
       // Save AI message
       const aiMsgId = generateId();

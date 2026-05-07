@@ -47,6 +47,6 @@ export const plans = {
 
 export const chat = {
   history: (notebookId) => request(`/notebooks/${notebookId}/chat`),
-  send: (notebookId, message) => request(`/notebooks/${notebookId}/chat`, { method: 'POST', body: JSON.stringify({ message }) }),
+  send: (notebookId, message, mode) => request(`/notebooks/${notebookId}/chat`, { method: 'POST', body: JSON.stringify({ message, mode: mode || 'write' }) }),
   clear: (notebookId) => request(`/notebooks/${notebookId}/chat`, { method: 'DELETE' }),
 };

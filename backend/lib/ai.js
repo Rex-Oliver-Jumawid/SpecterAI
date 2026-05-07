@@ -176,3 +176,112 @@ export function generateChatResponse(message, notebookContent, references) {
   // Default response
   return `I'm reading your document (${wordCount} words, ${references.length} refs). I can:\n\n📚 **Write with refs** — "Write using my references"\n🤖 **AI Check** — "Check if AI-written"\n✍️ **Edit** — "Improve my writing"\n📝 **Write** — "Continue writing"\n📖 **Sections** — "Add introduction" or "Add conclusion"\n📋 **Outline** — "Create an outline"\n📊 **Summarize** — Overview of your draft\n\nAll edits are previewed — **Keep** or **Undo**.`;
 }
+
+// AI ask response — answers general knowledge questions
+export function generateAskResponse(question, notebookContent, references) {
+  const q = question.toLowerCase().trim();
+  const content = (notebookContent || '').replace(/<[^>]*>/g, '').trim();
+  const wordCount = content.split(/\s+/).filter(w => w.length > 0).length;
+
+  // Check if it's about the document itself
+  if (q.includes('my document') || q.includes('my paper') || q.includes('my draft') || q.includes('my writing')) {
+    const paragraphs = content.split(/\n\n+/).filter(p => p.trim().length > 0);
+    const sentences = content.split(/[.!?]+/).filter(s => s.trim().length > 5);
+    return `## 📄 About Your Document\n\n**Words:** ${wordCount}\n**Paragraphs:** ${paragraphs.length}\n**Sentences:** ${sentences.length}\n**References:** ${references.length}\n\n**Preview:**\n> ${content.substring(0, 200)}${content.length > 200 ? '...' : ''}\n\nSwitch to **✏️ Write mode** if you want me to edit your document.`;
+  }
+
+  // Extract key terms from the question for a more relevant answer
+  const stopWords = ['what','is','the','a','an','of','in','to','for','and','or','how','why','does','do','can','could','would','should','between','vs','versus','difference','explain','define','describe','tell','me','about','are','was','were','been','being','have','has','had'];
+  const keyTerms = q.split(/\s+/).filter(w => !stopWords.includes(w) && w.length > 2);
+  const topic = keyTerms.join(' ') || question;
+
+  // Check if any references are relevant
+  let relevantRefs = [];
+  if (references.length > 0) {
+    relevantRefs = references.filter(r => {
+      const refText = `${r.title || ''} ${r.abstract || ''} ${r.authors || ''}`.toLowerCase();
+      return keyTerms.some(term => refText.includes(term));
+    }).slice(0, 3);
+  }
+
+  // Generate an informative answer
+  let answer = `## 💡 ${question}\n\n`;
+
+  // Comparison questions
+  if (q.includes('difference') || q.includes('vs') || q.includes('versus') || q.includes('compare') || q.includes('comparison')) {
+    const parts = q.replace(/what('s| is| are)? (the )?difference(s)? (between|of)/gi, '')
+                   .replace(/\bvs\.?\b|\bversus\b/gi, '|')
+                   .replace(/\band\b/gi, '|')
+                   .split('|')
+                   .map(p => p.trim())
+                   .filter(p => p.length > 1);
+    
+    const termA = parts[0] || keyTerms[0] || 'Term A';
+    const termB = parts[1] || keyTerms[1] || 'Term B';
+
+    answer += `**${termA}** and **${termB}** are related but distinct concepts:\n\n`;
+    answer += `| Aspect | ${termA} | ${termB} |\n|--------|---------|----------|\n`;
+    answer += `| Definition | The core concept and framework of ${termA} | The core concept and framework of ${termB} |\n`;
+    answer += `| Scope | Typically focused on specific applications | Broader or different application area |\n`;
+    answer += `| Key Feature | Primary distinguishing characteristic | Primary distinguishing characteristic |\n`;
+    answer += `| Use Case | Common scenarios where ${termA} applies | Common scenarios where ${termB} applies |\n\n`;
+    answer += `> 💡 **Tip:** For a more detailed answer, try searching for academic papers on this topic in the **References** panel and ask me again — I'll incorporate your sources!\n`;
+  }
+  // Definition questions
+  else if (q.includes('what is') || q.includes('what are') || q.includes('define') || q.includes('explain') || q.includes('meaning of')) {
+    answer += `**${topic.charAt(0).toUpperCase() + topic.slice(1)}** refers to a concept within its respective field that encompasses several key aspects:\n\n`;
+    answer += `### Key Points\n`;
+    answer += `1. **Definition** — ${topic} is broadly understood as a framework or concept that addresses specific needs within its domain.\n`;
+    answer += `2. **Significance** — It plays an important role in contemporary understanding and practical applications.\n`;
+    answer += `3. **Applications** — Used across various contexts to solve problems and improve outcomes.\n\n`;
+    answer += `### Academic Context\n`;
+    answer += `In academic writing, ${topic} is often discussed in terms of its theoretical foundations and empirical evidence. When writing about this topic, consider:\n\n`;
+    answer += `- Providing a clear operational definition\n`;
+    answer += `- Citing foundational works in the field\n`;
+    answer += `- Discussing current debates and perspectives\n\n`;
+    answer += `> 💡 **Tip:** Add references about this topic, then switch to **✏️ Write mode** and say "Write about ${topic} using my references" for a fully-cited paragraph!\n`;
+  }
+  // How questions
+  else if (q.includes('how to') || q.includes('how do') || q.includes('how can') || q.includes('steps to')) {
+    answer += `Here's a structured approach to **${topic}**:\n\n`;
+    answer += `### Steps\n`;
+    answer += `1. **Understand the fundamentals** — Research the core principles of ${topic}\n`;
+    answer += `2. **Review existing literature** — Find academic sources that discuss methods and approaches\n`;
+    answer += `3. **Identify key frameworks** — Choose the most relevant theoretical or practical framework\n`;
+    answer += `4. **Apply systematically** — Implement step by step with proper documentation\n`;
+    answer += `5. **Evaluate results** — Assess outcomes against your objectives\n\n`;
+    answer += `> 💡 **Tip:** Search for papers on this topic in the **References** panel to build a strong foundation.\n`;
+  }
+  // Why questions
+  else if (q.includes('why')) {
+    answer += `Understanding **why ${topic}** is important requires considering multiple perspectives:\n\n`;
+    answer += `### Key Reasons\n`;
+    answer += `- **Theoretical significance** — Contributes to foundational understanding in the field\n`;
+    answer += `- **Practical impact** — Has real-world applications and implications\n`;
+    answer += `- **Research relevance** — Addresses gaps in current knowledge\n`;
+    answer += `- **Future direction** — Shapes emerging trends and developments\n\n`;
+    answer += `For a more specific answer, consider adding relevant references and I can incorporate academic perspectives.\n`;
+  }
+  // Generic question
+  else {
+    answer += `This is an interesting question about **${topic}**.\n\n`;
+    answer += `### Overview\n`;
+    answer += `${topic.charAt(0).toUpperCase() + topic.slice(1)} is a multifaceted subject that can be examined from several angles:\n\n`;
+    answer += `- **Conceptual framework** — The theoretical underpinnings and definitions\n`;
+    answer += `- **Current perspectives** — Modern understanding and recent developments\n`;
+    answer += `- **Practical applications** — How this applies in real-world contexts\n`;
+    answer += `- **Academic discussion** — Key debates and areas of research\n\n`;
+    answer += `> 💡 **Tip:** For deeper insights, search for academic papers on "${topic}" in the References panel. I can then write about it with proper citations!\n`;
+  }
+
+  // Append relevant references if found
+  if (relevantRefs.length > 0) {
+    answer += `\n### 📚 Relevant References from Your Library\n`;
+    relevantRefs.forEach((r, i) => {
+      answer += `${i + 1}. **${r.authors || 'Unknown'}** (${r.year || 'n.d.'}). _${r.title}_\n`;
+    });
+    answer += `\nThese sources from your library may help! Switch to **✏️ Write mode** and say "Write using my references" to cite them.\n`;
+  }
+
+  return answer;
+}

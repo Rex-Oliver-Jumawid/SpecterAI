@@ -595,10 +595,10 @@ function AppShell() {
       setAllPlans(prev => prev.map(p => p.id === id ? u : p));
     } catch (e) { console.error(e); }
   };
-  const handleSendMessage = async (message) => {
+  const handleSendMessage = async (message, mode) => {
     if (!notebook) return;
     try {
-      const result = await chatApi.send(notebook.id, message);
+      const result = await chatApi.send(notebook.id, message, mode);
       setChatHistory(prev => [...prev, result.userMessage, result.aiMessage]);
       return result;
     }

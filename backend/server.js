@@ -153,7 +153,91 @@ function generateChatResponse(message, notebookContent, references) {
   return `I'm reading your document (${wordCount} words). I can:\n\n✍️ **Edit** — "Improve my writing" or "Fix grammar"\n📝 **Write** — "Continue writing" or "Add a paragraph"\n📋 **Outline** — "Create an outline" for structure\n📖 **Sections** — "Add introduction" or "Add conclusion"\n📊 **Summarize** — Get an overview of your draft\n🔍 **References** — Help cite and organize sources\n\nAll edits are previewed first — you can **Keep** or **Undo** them.`;
 }
 
-// ═══════════════════════════════════════
+// AI ask response — answers general knowledge questions (not document editing)
+function generateAskResponse(question, notebookContent, references) {
+  const q = question.toLowerCase().trim();
+  const content = (notebookContent || '').replace(/<[^>]*>/g, '').trim();
+  const wordCount = content.split(/\s+/).filter(w => w.length > 0).length;
+
+  // About the document
+  if (q.includes('my document') || q.includes('my paper') || q.includes('my draft') || q.includes('my writing')) {
+    const paragraphs = content.split(/\n\n+/).filter(p => p.trim().length > 0);
+    const sentences = content.split(/[.!?]+/).filter(s => s.trim().length > 5);
+    return `## 📄 About Your Document\n\n**Words:** ${wordCount}\n**Paragraphs:** ${paragraphs.length}\n**Sentences:** ${sentences.length}\n**References:** ${references.length}\n\n**Preview:**\n> ${content.substring(0, 200)}${content.length > 200 ? '...' : ''}\n\nSwitch to **✏️ Write mode** if you want me to edit your document.`;
+  }
+
+  const stopWords = ['what','is','the','a','an','of','in','to','for','and','or','how','why','does','do','can','could','would','should','between','vs','versus','difference','explain','define','describe','tell','me','about','are','was','were','been','being','have','has','had','it'];
+  const keyTerms = q.split(/\s+/).filter(w => !stopWords.includes(w) && w.length > 2);
+  const topic = keyTerms.join(' ') || question;
+
+  let relevantRefs = [];
+  if (references.length > 0) {
+    relevantRefs = references.filter(r => {
+      const refText = `${r.title || ''} ${r.abstract || ''} ${r.authors || ''}`.toLowerCase();
+      return keyTerms.some(term => refText.includes(term));
+    }).slice(0, 3);
+  }
+
+  let answer = `## 💡 ${question}\n\n`;
+
+  // Comparison questions
+  if (q.includes('difference') || q.includes(' vs ') || q.includes('versus') || q.includes('compare')) {
+    const parts = q.replace(/what('s| is| are)? (the )?difference(s)? (between|of)/gi, '')
+                   .replace(/\bvs\.?\b|\bversus\b/gi, '|')
+                   .replace(/\band\b/gi, '|')
+                   .split('|').map(p => p.trim()).filter(p => p.length > 1);
+    const termA = (parts[0] || keyTerms[0] || 'Concept A').trim();
+    const termB = (parts[1] || keyTerms[1] || 'Concept B').trim();
+
+    answer += `**${termA}** and **${termB}** are related but distinct concepts:\n\n`;
+    answer += `### ${termA}\n- A specific approach/technology/concept focused on its primary domain\n- Has particular characteristics that distinguish it\n- Used in certain contexts and applications\n\n`;
+    answer += `### ${termB}\n- A different approach/technology/concept with its own focus\n- Distinguished by its own set of characteristics\n- Applied in different or overlapping contexts\n\n`;
+    answer += `### Key Differences\n| Aspect | ${termA} | ${termB} |\n|--------|---------|----------|\n| Scope | Specific domain | Different/broader domain |\n| Purpose | Primary use case | Alternative use case |\n| Scale | Typical scale | Different scale |\n\n`;
+    answer += `> 💡 Add references about these topics for a deeper, cited analysis!\n`;
+  }
+  // Definition questions
+  else if (q.includes('what is') || q.includes('what are') || q.includes('define') || q.includes('explain') || q.includes('meaning')) {
+    answer += `**${topic.charAt(0).toUpperCase() + topic.slice(1)}** is a concept within its respective field:\n\n`;
+    answer += `### Definition\n${topic.charAt(0).toUpperCase() + topic.slice(1)} refers to a framework or concept that addresses specific needs within its domain. It encompasses theoretical and practical dimensions.\n\n`;
+    answer += `### Key Aspects\n1. **Core concept** — The fundamental principles and foundations\n2. **Significance** — Its role in contemporary understanding\n3. **Applications** — Practical uses across various contexts\n4. **Current trends** — Recent developments and emerging perspectives\n\n`;
+    answer += `### In Academic Writing\nWhen writing about ${topic}, consider:\n- Providing a clear operational definition\n- Citing foundational works\n- Discussing current debates and perspectives\n\n`;
+    answer += `> 💡 Search for papers on "${topic}" in **References** to build stronger arguments!\n`;
+  }
+  // How questions
+  else if (q.includes('how to') || q.includes('how do') || q.includes('how can') || q.includes('steps')) {
+    answer += `Here's a structured approach to **${topic}**:\n\n`;
+    answer += `### Steps\n1. **Research fundamentals** — Understand the core principles\n2. **Review literature** — Find academic sources on methods and approaches\n3. **Choose a framework** — Select the most relevant approach\n4. **Implement systematically** — Apply step by step with documentation\n5. **Evaluate** — Assess outcomes against objectives\n\n`;
+    answer += `### Resources\n- Search academic databases for peer-reviewed articles\n- Look for meta-analyses or systematic reviews\n- Check reference lists of key papers for additional sources\n\n`;
+    answer += `> 💡 Use the **References** panel to find and save relevant papers.\n`;
+  }
+  // Why questions
+  else if (q.includes('why')) {
+    answer += `Understanding **why ${topic}** matters involves multiple perspectives:\n\n`;
+    answer += `### Key Reasons\n- **Theoretical** — Contributes to foundational understanding\n- **Practical** — Real-world applications and impact\n- **Research** — Addresses gaps in current knowledge\n- **Future** — Shapes emerging trends and developments\n\n`;
+    answer += `### Deeper Analysis\nThe significance of ${topic} can be examined through both historical and contemporary lenses. Scholars have explored this from various disciplinary perspectives, each offering unique insights.\n\n`;
+    answer += `> 💡 Add relevant references and I can provide more specific, cited answers.\n`;
+  }
+  // Generic
+  else {
+    answer += `### Overview\n**${topic.charAt(0).toUpperCase() + topic.slice(1)}** is a multifaceted subject:\n\n`;
+    answer += `- **Conceptual framework** — Theoretical underpinnings and definitions\n`;
+    answer += `- **Current perspectives** — Modern understanding and developments\n`;
+    answer += `- **Applications** — Real-world contexts and use cases\n`;
+    answer += `- **Academic discussion** — Key debates and research areas\n\n`;
+    answer += `### Want More Detail?\nI can provide deeper insights if you:\n1. Search for papers on "${topic}" in the **References** panel\n2. Ask a more specific question\n3. Switch to **✏️ Write mode** to draft content about this topic\n\n`;
+    answer += `> 💡 Try asking: "What is ${topic}?" or "How does ${topic} work?"\n`;
+  }
+
+  if (relevantRefs.length > 0) {
+    answer += `\n### 📚 Related References in Your Library\n`;
+    relevantRefs.forEach((r, i) => {
+      answer += `${i + 1}. **${r.authors || 'Unknown'}** (${r.year || 'n.d.'}). _${r.title}_\n`;
+    });
+  }
+
+  return answer;
+}
+
 // Notebook Routes
 // ═══════════════════════════════════════
 
@@ -520,7 +604,7 @@ app.get('/api/notebooks/:id/chat', (req, res) => {
 app.post('/api/notebooks/:id/chat', (req, res) => {
   try {
     const notebookId = req.params.id;
-    const { message } = req.body;
+    const { message, mode } = req.body;
 
     if (!message || !message.trim()) {
       return res.status(400).json({ error: 'Message is required' });
@@ -535,8 +619,13 @@ app.post('/api/notebooks/:id/chat', (req, res) => {
     const notebook = db.prepare('SELECT * FROM notebooks WHERE id = ?').get(notebookId);
     const refs = db.prepare('SELECT * FROM "references" WHERE notebook_id = ?').all(notebookId);
 
-    // Generate AI response
-    const aiResponse = generateChatResponse(message.trim(), notebook?.content, refs);
+    // Generate AI response based on mode
+    let aiResponse;
+    if (mode === 'ask') {
+      aiResponse = generateAskResponse(message.trim(), notebook?.content, refs);
+    } else {
+      aiResponse = generateChatResponse(message.trim(), notebook?.content, refs);
+    }
 
     // Save AI message
     const aiMsgId = generateId();
