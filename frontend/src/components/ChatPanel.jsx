@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { FiSend, FiTrash2, FiX, FiFileText, FiZap } from 'react-icons/fi';
+import { FiSend, FiTrash2, FiX, FiFileText, FiZap, FiMinus, FiMaximize2 } from 'react-icons/fi';
 
 export default function ChatPanel({
   notebookId, chatHistory, onSendMessage, onClearChat,
@@ -8,18 +8,46 @@ export default function ChatPanel({
 }) {
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(false);
+  const [pos, setPos] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
+  const dragStartPos = useRef({ x: 0, y: 0 });
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [chatHistory, hasPendingEdit]);
+    if (!isMinimized) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [chatHistory, hasPendingEdit, isMinimized]);
 
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && !isMinimized) {
       setTimeout(() => inputRef.current?.focus(), 300);
     }
-  }, [isOpen]);
+  }, [isOpen, isMinimized]);
+
+  // Drag Handlers
+  const handlePointerDown = (e) => {
+    if (e.target.closest('.no-drag')) return;
+    setIsDragging(true);
+    dragStartPos.current = { x: e.clientX - pos.x, y: e.clientY - pos.y };
+    e.target.setPointerCapture(e.pointerId);
+  };
+
+  const handlePointerMove = (e) => {
+    if (!isDragging) return;
+    setPos({
+      x: e.clientX - dragStartPos.current.x,
+      y: e.clientY - dragStartPos.current.y
+    });
+  };
+
+  const handlePointerUp = (e) => {
+    setIsDragging(false);
+    e.target.releasePointerCapture(e.pointerId);
+  };
 
   const handleSend = async () => {
     if (!message.trim() || sending) return;
@@ -69,21 +97,37 @@ export default function ChatPanel({
 
   return (
     <div style={{
-      position: 'fixed', right: 0, top: 0, bottom: 0,
-      width: '420px', maxWidth: '100vw',
+      position: 'fixed',
+      right: '24px',
+      bottom: '24px',
+      width: '400px',
+      maxWidth: 'calc(100vw - 48px)',
+      height: isMinimized ? 'auto' : '650px',
+      maxHeight: 'calc(100vh - 48px)',
       background: 'var(--bg-secondary)',
-      borderLeft: '1px solid var(--border-color)',
+      border: '1px solid var(--border-color)',
+      borderRadius: '16px',
       display: 'flex', flexDirection: 'column',
-      zIndex: 40,
-      boxShadow: '-8px 0 40px rgba(0,0,0,0.15)',
-      animation: 'slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
+      zIndex: 50,
+      boxShadow: '0 12px 40px rgba(0,0,0,0.2)',
+      transform: `translate(${pos.x}px, ${pos.y}px)`,
+      transition: isDragging ? 'none' : 'height 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+      overflow: 'hidden',
+      animation: 'slideInUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
     }}>
-      {/* Header */}
-      <div style={{
+      {/* Header (Drag Handle) */}
+      <div 
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+        style={{
         padding: '14px 20px',
-        borderBottom: '1px solid var(--border-color)',
+        borderBottom: isMinimized ? 'none' : '1px solid var(--border-color)',
         background: 'linear-gradient(135deg, var(--bg-tertiary), var(--bg-secondary))',
-        flexShrink: 0
+        flexShrink: 0,
+        cursor: isDragging ? 'grabbing' : 'grab',
+        touchAction: 'none'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -103,7 +147,7 @@ export default function ChatPanel({
               </div>
             </div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+          <div className="no-drag" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
             {chatHistory.length > 0 && (
               <button onClick={onClearChat} title="Clear chat" style={{
                 background: 'none', border: 'none', cursor: 'pointer',
@@ -112,7 +156,13 @@ export default function ChatPanel({
                 <FiTrash2 size={15} />
               </button>
             )}
-            <button onClick={onClose} style={{
+            <button onClick={() => setIsMinimized(!isMinimized)} title={isMinimized ? "Expand" : "Minimize"} style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              padding: '6px', borderRadius: '6px', color: 'var(--text-muted)'
+            }}>
+              {isMinimized ? <FiMaximize2 size={15} /> : <FiMinus size={16} />}
+            </button>
+            <button onClick={onClose} title="Close" style={{
               background: 'none', border: 'none', cursor: 'pointer',
               padding: '6px', borderRadius: '6px', color: 'var(--text-muted)'
             }}>
@@ -122,7 +172,8 @@ export default function ChatPanel({
         </div>
 
         {/* Context indicator */}
-        <div style={{
+        {!isMinimized && (
+          <div style={{
           marginTop: '10px', padding: '6px 10px', borderRadius: '6px',
           background: 'var(--bg-card)', border: '1px solid var(--border-color)',
           display: 'flex', alignItems: 'center', gap: '6px',
@@ -132,10 +183,13 @@ export default function ChatPanel({
           <span>Document context: <strong style={{ color: 'var(--text-secondary)' }}>{contentWordCount} words</strong></span>
           <span style={{ marginLeft: 'auto', color: '#3b82f6', fontWeight: 600 }}>Live</span>
         </div>
+        )}
       </div>
 
       {/* Messages */}
-      <div style={{ flex: 1, overflow: 'auto', padding: '16px' }}>
+      {!isMinimized && (
+        <>
+          <div style={{ flex: 1, overflow: 'auto', padding: '16px' }}>
         {chatHistory.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '30px 20px' }}>
             <div style={{
@@ -310,6 +364,8 @@ export default function ChatPanel({
           Enter to send · Shift+Enter for new line · AI reads your document live
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 }
