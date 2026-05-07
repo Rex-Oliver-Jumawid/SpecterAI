@@ -83,10 +83,38 @@ function markdownToHtml(text) {
   return result.join('\n');
 }
 
+const PAGE_DELIMITER = '<!--PAGE_BREAK-->';
+
 const Editor = React.forwardRef(({ content, onChange, wordCount, documentTitle, onTitleChange, references, pendingEdit, onAcceptEdit, onRejectEdit }, ref) => {
   const [tooltip, setTooltip] = useState(null);
+  const [activeTab, setActiveTab] = useState(0);
+  const [tabNames, setTabNames] = useState(['Page 1']);
+  const [editingTabIdx, setEditingTabIdx] = useState(null);
+  const [editingTabName, setEditingTabName] = useState('');
 
-  const initialHtml = useMemo(() => markdownToHtml(content || ''), []);
+  // Parse pages from content
+  const pages = useMemo(() => {
+    if (!content) return [''];
+    const parts = content.split(PAGE_DELIMITER);
+    return parts.length > 0 ? parts : [''];
+  }, [content]);
+
+  // Initialize tab names from page count
+  useEffect(() => {
+    if (pages.length > tabNames.length) {
+      setTabNames(prev => {
+        const newNames = [...prev];
+        for (let i = prev.length; i < pages.length; i++) {
+          newNames.push(`Page ${i + 1}`);
+        }
+        return newNames;
+      });
+    }
+  }, [pages.length]);
+
+  const currentPageContent = pages[activeTab] || '';
+
+  const initialHtml = useMemo(() => markdownToHtml(currentPageContent || ''), []);
 
   const editor = useEditor({
     extensions: [
@@ -100,19 +128,66 @@ const Editor = React.forwardRef(({ content, onChange, wordCount, documentTitle, 
     ],
     content: initialHtml,
     onUpdate: ({ editor }) => {
-      onChange(editor.getHTML());
+      const html = editor.getHTML();
+      // Update the current page in the pages array
+      const newPages = [...pages];
+      newPages[activeTab] = html;
+      onChange(newPages.join(PAGE_DELIMITER));
     }
   });
+
+  // Switch tab — update editor content
+  useEffect(() => {
+    if (editor && pages[activeTab] !== undefined) {
+      const pageHtml = markdownToHtml(pages[activeTab] || '');
+      const currentHtml = editor.getHTML();
+      if (currentHtml !== pageHtml) {
+        editor.commands.setContent(pageHtml || '<p></p>');
+      }
+    }
+  }, [activeTab]);
 
   // Sync external content changes (only if editor is empty, prevents cursor jumping)
   useEffect(() => {
     if (editor && content && editor.isEmpty) {
-      const html = markdownToHtml(content);
+      const html = markdownToHtml(pages[activeTab] || '');
       if (editor.getHTML() !== html) {
         editor.commands.setContent(html);
       }
     }
   }, [content, editor]);
+
+  const addPage = () => {
+    const newPages = [...pages, '<p></p>'];
+    const newNames = [...tabNames, `Page ${newPages.length}`];
+    setTabNames(newNames);
+    onChange(newPages.join(PAGE_DELIMITER));
+    setActiveTab(newPages.length - 1);
+  };
+
+  const removePage = (idx) => {
+    if (pages.length <= 1) return;
+    const newPages = pages.filter((_, i) => i !== idx);
+    const newNames = tabNames.filter((_, i) => i !== idx);
+    setTabNames(newNames);
+    const newActive = idx >= newPages.length ? newPages.length - 1 : idx;
+    setActiveTab(newActive);
+    onChange(newPages.join(PAGE_DELIMITER));
+  };
+
+  const startRenameTab = (idx) => {
+    setEditingTabIdx(idx);
+    setEditingTabName(tabNames[idx]);
+  };
+
+  const finishRenameTab = () => {
+    if (editingTabIdx !== null && editingTabName.trim()) {
+      const newNames = [...tabNames];
+      newNames[editingTabIdx] = editingTabName.trim();
+      setTabNames(newNames);
+    }
+    setEditingTabIdx(null);
+  };
 
   // Handle Attribution Tooltip Selection
   const handleMouseUp = useCallback(() => {
@@ -167,7 +242,6 @@ const Editor = React.forwardRef(({ content, onChange, wordCount, documentTitle, 
   // Compute diff for AI edits
   const computeInlineDiff = useCallback(() => {
     if (!pendingEdit) return null;
-    // Strip HTML for basic diffing
     const stripHtml = (html) => {
       const tmp = document.createElement('DIV');
       tmp.innerHTML = html;
@@ -262,7 +336,7 @@ const Editor = React.forwardRef(({ content, onChange, wordCount, documentTitle, 
       )}
 
       {/* Editor Header */}
-      <div style={{ padding: '24px 40px 16px', flexShrink: 0, borderBottom: '1px solid transparent', zIndex: 5 }}>
+      <div style={{ padding: '24px 40px 16px', flexShrink: 0, zIndex: 5 }}>
         <input
           value={documentTitle || ''}
           onChange={(e) => onTitleChange(e.target.value)}
@@ -277,10 +351,77 @@ const Editor = React.forwardRef(({ content, onChange, wordCount, documentTitle, 
           <span>{wordCount} words</span>
           <span>·</span>
           <span>{Math.ceil(wordCount / 200)} min read</span>
+          <span>·</span>
+          <span>Page {activeTab + 1} of {pages.length}</span>
         </div>
       </div>
 
       {!pendingEdit && <MenuBar editor={editor} />}
+
+      {/* Tab Bar */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: '0', padding: '0 20px',
+        background: 'var(--bg-tertiary)', borderBottom: '1px solid var(--border-color)',
+        flexShrink: 0, overflow: 'auto',
+      }}>
+        {tabNames.slice(0, pages.length).map((name, idx) => (
+          <div
+            key={idx}
+            onClick={() => setActiveTab(idx)}
+            onDoubleClick={() => startRenameTab(idx)}
+            style={{
+              padding: '8px 16px', fontSize: '0.72rem', fontWeight: activeTab === idx ? 600 : 400,
+              color: activeTab === idx ? 'var(--text-primary)' : 'var(--text-muted)',
+              background: activeTab === idx ? 'var(--bg-secondary)' : 'transparent',
+              borderBottom: activeTab === idx ? '2px solid #7c3aed' : '2px solid transparent',
+              cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px',
+              transition: 'all 0.15s', whiteSpace: 'nowrap', position: 'relative',
+              borderTop: activeTab === idx ? '2px solid #7c3aed' : '2px solid transparent',
+              borderRadius: activeTab === idx ? '6px 6px 0 0' : '0',
+            }}
+          >
+            {editingTabIdx === idx ? (
+              <input
+                autoFocus
+                value={editingTabName}
+                onChange={e => setEditingTabName(e.target.value)}
+                onBlur={finishRenameTab}
+                onKeyDown={e => { if (e.key === 'Enter') finishRenameTab(); }}
+                style={{
+                  background: 'transparent', border: 'none', outline: 'none',
+                  color: 'var(--text-primary)', fontSize: '0.72rem', fontWeight: 600,
+                  width: '80px', padding: 0,
+                }}
+                onClick={e => e.stopPropagation()}
+              />
+            ) : (
+              <span>{name}</span>
+            )}
+            {pages.length > 1 && activeTab === idx && (
+              <button
+                onClick={(e) => { e.stopPropagation(); removePage(idx); }}
+                style={{
+                  background: 'none', border: 'none', cursor: 'pointer', padding: '0 2px',
+                  color: 'var(--text-muted)', fontSize: '0.7rem', lineHeight: 1, display: 'flex',
+                }}
+                title="Remove page"
+              >
+                <FiX size={11} />
+              </button>
+            )}
+          </div>
+        ))}
+        <button
+          onClick={addPage}
+          style={{
+            padding: '6px 10px', background: 'none', border: 'none', cursor: 'pointer',
+            color: 'var(--text-muted)', fontSize: '0.82rem', display: 'flex', alignItems: 'center',
+          }}
+          title="Add new page"
+        >
+          +
+        </button>
+      </div>
 
       <div className="editor-wrapper" onMouseUp={handleMouseUp}>
         {pendingEdit ? (
