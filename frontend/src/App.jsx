@@ -11,6 +11,7 @@ import LandingPage from './pages/LandingPage';
 import CalendarPage from './pages/CalendarPage';
 import ReferencesPage from './pages/ReferencesPage';
 import NotebooksPage from './pages/NotebooksPage';
+import ComparisonPage from './pages/ComparisonPage';
 import { notebooks, references as refsApi, plans as plansApi, chat as chatApi, BASE as API_BASE } from './api';
 import { FiFileText, FiCheckSquare, FiBookOpen, FiMessageSquare, FiX, FiAlertCircle, FiCheck, FiRotateCcw, FiChevronDown, FiChevronRight } from 'react-icons/fi';
 import './App.css';
@@ -734,6 +735,9 @@ function AppShell() {
               onAddReferenceToNotebook={handleAddReferenceToNotebook}
               onDeleteReference={handleDeleteReference} notebookId={notebook?.id}
               allNotebooks={allNotebooks} />
+          } />
+          <Route path="/comparison" element={
+            <ComparisonPage allNotebooks={allNotebooks} allReferences={refs} />
           } />
           <Route path="*" element={
             <NotebooksPage allNotebooks={allNotebooks}
