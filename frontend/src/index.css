@@ -167,36 +167,9 @@ input:focus, textarea:focus, select:focus { outline: 2px solid var(--color-spect
 .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 
 /* ═══ Responsive Calendar ═══ */
-.calendar-layout {
-  display: flex;
-  height: 100%;
-  overflow: hidden;
-  flex-direction: row;
-}
-
-.calendar-sidebar {
-  width: 360px;
-  border-left: 1px solid var(--border-color);
-  background: var(--bg-secondary);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  flex-shrink: 0;
-  border-top: none;
-}
-
-@media (max-width: 900px) {
-  .calendar-layout {
-    flex-direction: column;
-    overflow-y: auto;
+@media (min-width: 1024px) {
+  .lg-flex-row {
+    flex-direction: row !important;
+    justify-content: center !important;
   }
-  
-  .calendar-sidebar {
-    width: 100%;
-    border-left: none;
-    border-top: 1px solid var(--border-color);
-    /* On mobile, if the sidebar is open, it takes full width below the calendar */
-  }
-
-  /* Make calendar grid scrollable horizontally on very small screens if needed, or adjust sizes */
 }
