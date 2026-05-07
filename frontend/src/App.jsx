@@ -769,7 +769,7 @@ function AppShell() {
             <TemplatesPage onCreateFromTemplate={handleCreateFromTemplate} />
           } />
           <Route path="/summarizer" element={
-            <SummarizerPage />
+            <SummarizerPage allNotebooks={allNotebooks} />
           } />
           <Route path="/synthesis" element={
             <SynthesisPage allNotebooks={allNotebooks} />
