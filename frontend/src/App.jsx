@@ -424,6 +424,7 @@ function AppShell() {
   const [saveStatus, setSaveStatus] = useState('idle');
   const [refs, setRefs] = useState([]);
   const [planList, setPlanList] = useState([]);
+  const [allPlans, setAllPlans] = useState([]);
   const [selectedPlanId, setSelectedPlanId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [notebookError, setNotebookError] = useState(null);
@@ -438,7 +439,21 @@ function AppShell() {
     localStorage.setItem('specter_theme', darkMode ? 'dark' : 'light');
   }, [darkMode]);
 
-  // Init — load notebook list
+  // Load all plans across all notebooks
+  const refreshAllPlans = async (nbs) => {
+    const nbList = nbs || allNotebooks;
+    if (!nbList.length) return;
+    try {
+      const results = await Promise.all(nbList.map(nb => plansApi.list(nb.id).catch(() => [])));
+      const merged = results.flat().map((p, _, arr) => {
+        // attach notebook_id from parent if missing
+        return p;
+      });
+      setAllPlans(merged);
+    } catch (e) { console.error('Load all plans:', e); }
+  };
+
+  // Init — load notebook list + all plans
   useEffect(() => {
     if (initRef.current) return;
     initRef.current = true;
@@ -446,10 +461,18 @@ function AppShell() {
       try {
         const existing = await notebooks.list();
         setAllNotebooks(existing);
+        await refreshAllPlans(existing);
       } catch (e) { console.error('Init error:', e); }
       finally { setLoading(false); }
     })();
   }, []);
+
+  // Refresh all plans periodically (every 30s) for calendar + auto-trigger
+  useEffect(() => {
+    if (!allNotebooks.length) return;
+    const iv = setInterval(() => refreshAllPlans(), 60000);
+    return () => clearInterval(iv);
+  }, [allNotebooks]);
 
   const loadNotebookById = async (nbId) => {
     setNotebookError(null);
@@ -504,11 +527,11 @@ function AppShell() {
     return () => window.removeEventListener('keydown', h);
   }, [content, title, notebook]);
 
-  // Deadline auto-trigger (always on — 5 min grace period)
+  // Deadline auto-trigger (always on — 5 min grace period, checks ALL plans)
   useEffect(() => {
     const iv = setInterval(() => {
       const now = new Date();
-      planList.forEach(p => {
+      allPlans.forEach(p => {
         if (p.scheduled_date && p.status === 'planned') {
           const deadline = new Date(p.scheduled_date);
           const gracePeriod = 5 * 60 * 1000; // 5 minutes
@@ -519,7 +542,7 @@ function AppShell() {
       });
     }, 30000);
     return () => clearInterval(iv);
-  }, [planList]);
+  }, [allPlans]);
 
   // Handlers
   const handleAddReference = async (url, data) => {
@@ -609,6 +632,8 @@ function AppShell() {
       if (notebook && notebook.id === nbId) {
         setPlanList(prev => [...prev, p]);
       }
+      // Always update allPlans so calendar reflects it immediately
+      setAllPlans(prev => [...prev, p]);
       return p;
     } catch (e) { console.error(e); }
   };
@@ -664,9 +689,10 @@ function AppShell() {
               currentNotebookId={notebook?.id} />
           } />
           <Route path="/calendar" element={
-            <CalendarPage plans={planList} allNotebooks={allNotebooks}
+            <CalendarPage plans={allPlans} allNotebooks={allNotebooks}
               onCreatePlanForNotebook={handleCreatePlanForNotebook}
-              onDeletePlan={handleDeletePlan} onTriggerAi={handleTriggerAi}
+              onDeletePlan={(id) => { handleDeletePlan(id); setAllPlans(prev => prev.filter(p => p.id !== id)); }}
+              onTriggerAi={handleTriggerAi}
               currentNotebook={notebook} onSwitchNotebook={loadNotebookById} />
           } />
           <Route path="/references" element={
