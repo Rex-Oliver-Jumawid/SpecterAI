@@ -247,7 +247,8 @@ function NotebookPage({ notebookId, appState }) {
 
   const bibliography = (() => {
     const matches = [...content.matchAll(/\[cite:([^\]]+)\]/g)];
-    const citedIds = [...new Set(matches.map(m => m[1]))];
+    const htmlMatches = [...content.matchAll(/data-cite-id="([^"]+)"/g)];
+    const citedIds = [...new Set([...matches.map(m => m[1]), ...htmlMatches.map(m => m[1])])];
     return refs.filter(r => citedIds.includes(r.id)).sort((a, b) => (a.authors || '').localeCompare(b.authors || ''));
   })();
 
@@ -389,8 +390,12 @@ function NotebookPage({ notebookId, appState }) {
                               </div>
                               <button
                                 onClick={() => {
-                                  // Remove citation from content and delete the reference
-                                  setContent(prev => prev.replace(new RegExp(`\\s*\\[cite:${ref.id}\\]`, 'g'), ''));
+                                  // Remove citation from content (both raw tag and HTML span) and delete the reference
+                                  setContent(prev => {
+                                    let newContent = prev.replace(new RegExp(`\\s*\\[cite:${ref.id}\\]`, 'g'), '');
+                                    newContent = newContent.replace(new RegExp(`<span[^>]*data-cite-id="${ref.id}"[^>]*>.*?</span>&nbsp;?`, 'g'), '');
+                                    return newContent;
+                                  });
                                   handleDeleteReference(ref.id);
                                 }}
                                 title="Remove from bibliography"
