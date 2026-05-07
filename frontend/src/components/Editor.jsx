@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useImperativeHandle } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
@@ -178,6 +178,26 @@ const Editor = React.forwardRef(({ content, onChange, wordCount, documentTitle, 
       onChange(newPages.join(PAGE_DELIMITER));
     }
   });
+
+  useImperativeHandle(ref, () => ({
+    insertCitation: (refId) => {
+      if (!editor) return;
+      const ref = references?.find(r => r.id === refId);
+      if (!ref) return;
+      const authorLast = (ref.authors || 'Unknown').split(',')[0].trim().split(' ').pop();
+      const year = ref.year || 'n.d.';
+      
+      const citationHtml = `<span class="apa-citation" data-cite-id="${refId}" title="${ref.title}">(${authorLast}, ${year})</span>&nbsp;`;
+      
+      editor.chain().focus().insertContent(citationHtml).run();
+      
+      // Update the content so the parent knows about the raw tag too
+      const currentHtml = editor.getHTML();
+      const newPages = [...pages];
+      newPages[activeTab] = currentHtml + ` [cite:${refId}]`;
+      onChange(newPages.join(PAGE_DELIMITER));
+    }
+  }));
 
   // Switch tab — update editor content
   useEffect(() => {

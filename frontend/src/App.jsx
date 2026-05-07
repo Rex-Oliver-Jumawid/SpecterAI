@@ -580,20 +580,9 @@ function AppShell() {
     try { await refsApi.delete(id); setRefs(prev => prev.filter(r => r.id !== id)); } catch (e) { console.error(e); }
   };
   const insertCitation = (refId) => {
-    const ref = refs.find(r => r.id === refId);
-    if (!ref) return;
-    const authorLast = (ref.authors || 'Unknown').split(',')[0].trim().split(' ').pop();
-    const year = ref.year || 'n.d.';
-    // Insert APA in-text citation as styled span with data attribute for bibliography matching
-    const citationHtml = `<span class="inline-citation" data-cite-id="${refId}" contenteditable="false">(${authorLast}, ${year})</span>&nbsp;`;
-    setContent(prev => {
-      // Also keep machine-readable tag for bibliography detection
-      if (!prev.includes(`[cite:${refId}]`)) {
-        return prev + ` [cite:${refId}]`;
-      }
-      return prev;
-    });
-    // Also tell tiptap to insert at cursor if possible
+    if (editorRef.current) {
+      editorRef.current.insertCitation(refId);
+    }
   };
   const handleCreatePlan = async (data) => {
     if (!notebook) return;
