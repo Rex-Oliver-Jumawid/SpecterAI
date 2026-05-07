@@ -11,7 +11,7 @@ import LandingPage from './pages/LandingPage';
 import CalendarPage from './pages/CalendarPage';
 import ReferencesPage from './pages/ReferencesPage';
 import NotebooksPage from './pages/NotebooksPage';
-import { notebooks, references as refsApi, plans as plansApi, chat as chatApi } from './api';
+import { notebooks, references as refsApi, plans as plansApi, chat as chatApi, BASE as API_BASE } from './api';
 import { FiFileText, FiCheckSquare, FiBookOpen, FiMessageSquare, FiX, FiAlertCircle, FiCheck, FiRotateCcw, FiChevronDown, FiChevronRight } from 'react-icons/fi';
 import './App.css';
 
@@ -562,7 +562,7 @@ function AppShell() {
       navigate(`/notebooks/${nb.id}`);
     } catch (e) { 
       console.error('Create notebook failed:', e);
-      alert(`Failed to create notebook: ${e.message}. \n\nIf you are on Vercel, ensure VITE_API_URL is set to your backend URL in the project environment variables.`);
+      alert(`Failed to create notebook: ${e.message}. \n\nTarget URL: ${API_BASE}/notebooks\n\nIf the URL above is just "/api/notebooks", then Vercel is not picking up your VITE_API_URL variable.`);
     }
   };
   const handleDeleteNotebook = async (id) => {
