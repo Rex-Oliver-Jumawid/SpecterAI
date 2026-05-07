@@ -338,7 +338,7 @@ function NotebookPage({ notebookId, appState }) {
         )}
 
         {/* Center: Editor */}
-        <main style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
+        <main style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'auto' }}>
           <Editor ref={editorRef} content={content} onChange={setContent}
             wordCount={wordCount} documentTitle={title} onTitleChange={setTitle}
             references={refs}
