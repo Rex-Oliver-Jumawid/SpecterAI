@@ -15,6 +15,7 @@ import ComparisonPage from './pages/ComparisonPage';
 import DashboardPage from './pages/DashboardPage';
 import AIDetectionPage from './pages/AIDetectionPage';
 import TemplatesPage from './pages/TemplatesPage';
+import SummarizerPage from './pages/SummarizerPage';
 import { notebooks, references as refsApi, plans as plansApi, chat as chatApi, BASE as API_BASE } from './api';
 import { FiFileText, FiCheckSquare, FiBookOpen, FiMessageSquare, FiX, FiAlertCircle, FiCheck, FiRotateCcw, FiChevronDown, FiChevronRight } from 'react-icons/fi';
 import './App.css';
@@ -764,6 +765,9 @@ function AppShell() {
           } />
           <Route path="/templates" element={
             <TemplatesPage onCreateFromTemplate={handleCreateFromTemplate} />
+          } />
+          <Route path="/summarizer" element={
+            <SummarizerPage />
           } />
           <Route path="*" element={
             <NotebooksPage allNotebooks={allNotebooks}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { FiShield, FiBookOpen, FiAlertTriangle, FiCheckCircle, FiInfo } from 'react-icons/fi';
+import { FiShield, FiBookOpen, FiAlertTriangle, FiCheckCircle, FiInfo, FiRefreshCw, FiEdit3 } from 'react-icons/fi';
 import { notebooks as notebooksApi } from '../api';
 
 export default function AIDetectionPage({ allNotebooks = [] }) {
@@ -9,6 +9,9 @@ export default function AIDetectionPage({ allNotebooks = [] }) {
   const [analyzed, setAnalyzed] = useState(false);
   const [sentences, setSentences] = useState([]);
   const [overallScore, setOverallScore] = useState(0);
+  const [selectedSentenceId, setSelectedSentenceId] = useState(null);
+  const [humanizing, setHumanizing] = useState(null);
+  const [humanizedMap, setHumanizedMap] = useState({});
 
   // Load notebook content when selected
   useEffect(() => {
@@ -75,6 +78,66 @@ export default function AIDetectionPage({ allNotebooks = [] }) {
       setAnalyzed(true);
       setLoading(false);
     }, 1500);
+  };
+
+  // Humanize a sentence
+  const humanizeSentence = (sentence) => {
+    setHumanizing(sentence.id);
+    setTimeout(() => {
+      const text = sentence.text;
+      let humanized = text;
+
+      // Simplify formal words
+      const replacements = [
+        [/\bfurthermore\b/gi, 'also'],
+        [/\bmoreover\b/gi, 'on top of that'],
+        [/\bconsequently\b/gi, 'so'],
+        [/\bnevertheless\b/gi, 'still'],
+        [/\btherefore\b/gi, 'so'],
+        [/\bdemonstrates\b/gi, 'shows'],
+        [/\bcomprehensive\b/gi, 'thorough'],
+        [/\butilize\b/gi, 'use'],
+        [/\bfacilitate\b/gi, 'help'],
+        [/\bsubsequently\b/gi, 'then'],
+        [/\bsignificant\b/gi, 'major'],
+        [/\bmultifaceted\b/gi, 'complex'],
+        [/\bparadigm\b/gi, 'model'],
+        [/\bnuanced\b/gi, 'detailed'],
+        [/\brobust\b/gi, 'strong'],
+        [/\bimplications\b/gi, 'effects'],
+        [/\bempirical\b/gi, 'data-driven'],
+        [/\bsystematic\b/gi, 'organized'],
+        [/\bfoundational\b/gi, 'basic'],
+        [/\bcontemporary\b/gi, 'modern'],
+        [/\bin order to\b/gi, 'to'],
+        [/\bit is important to note that\b/gi, 'notably,'],
+        [/\bplays a crucial role\b/gi, 'matters a lot'],
+      ];
+
+      replacements.forEach(([pattern, replacement]) => {
+        humanized = humanized.replace(pattern, replacement);
+      });
+
+      // Add contractions for natural feel
+      humanized = humanized.replace(/\bdo not\b/gi, "don't");
+      humanized = humanized.replace(/\bcannot\b/gi, "can't");
+      humanized = humanized.replace(/\bit is\b/gi, "it's");
+      humanized = humanized.replace(/\bthere is\b/gi, "there's");
+
+      setHumanizedMap(prev => ({ ...prev, [sentence.id]: humanized }));
+      // Update sentence score to low
+      setSentences(prev => prev.map(s => s.id === sentence.id ? { ...s, score: Math.max(8, s.score - 45), humanized: true } : s));
+      setHumanizing(null);
+      setSelectedSentenceId(null);
+
+      // Recalculate overall score
+      setSentences(prev => {
+        const total = prev.reduce((sum, s) => sum + s.score, 0);
+        const avg = prev.length > 0 ? Math.round(total / prev.length) : 0;
+        setOverallScore(avg);
+        return prev;
+      });
+    }, 800);
   };
 
   const getColor = (score) => {
@@ -236,24 +299,76 @@ export default function AIDetectionPage({ allNotebooks = [] }) {
               <div style={{ lineHeight: 2, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
                 {sentences.map((s, i) => {
                   const c = getColor(s.score);
+                  const isSelected = selectedSentenceId === s.id;
+                  const wasHumanized = humanizedMap[s.id];
+                  const displayText = wasHumanized || s.text;
                   return (
-                    <span
-                      key={i}
-                      title={`AI Score: ${s.score}% — ${c.label}`}
-                      style={{
-                        background: c.bg,
-                        borderBottom: `2px solid ${c.border}`,
-                        padding: '2px 4px',
-                        borderRadius: '3px',
-                        cursor: 'default',
-                        transition: 'all 0.2s'
-                      }}
-                    >
-                      {s.text}{' '}
+                    <span key={i} style={{ position: 'relative', display: 'inline' }}>
+                      <span
+                        onClick={() => s.score >= 40 && !wasHumanized ? setSelectedSentenceId(isSelected ? null : s.id) : null}
+                        title={wasHumanized ? '✓ Humanized' : `AI Score: ${s.score}% — ${c.label}${s.score >= 40 ? ' (click to humanize)' : ''}`}
+                        style={{
+                          background: wasHumanized ? 'rgba(74, 222, 128, 0.08)' : c.bg,
+                          borderBottom: wasHumanized ? '2px solid rgba(74, 222, 128, 0.3)' : `2px solid ${c.border}`,
+                          padding: '2px 4px',
+                          borderRadius: '3px',
+                          cursor: s.score >= 40 && !wasHumanized ? 'pointer' : 'default',
+                          transition: 'all 0.2s',
+                          outline: isSelected ? '2px solid #f59e0b' : 'none',
+                          outlineOffset: '1px',
+                          textDecoration: wasHumanized ? 'none' : 'none',
+                        }}
+                      >
+                        {displayText}
+                        {wasHumanized && <span style={{ fontSize: '0.6rem', marginLeft: '4px', color: '#4ade80' }}>✓</span>}
+                      </span>
+                      {isSelected && !wasHumanized && (
+                        <span style={{
+                          position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)',
+                          marginBottom: '6px', zIndex: 20, whiteSpace: 'nowrap'
+                        }}>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); humanizeSentence(s); }}
+                            disabled={humanizing === s.id}
+                            style={{
+                              display: 'flex', alignItems: 'center', gap: '5px',
+                              padding: '6px 14px', borderRadius: '8px', border: 'none',
+                              background: 'linear-gradient(135deg, #f59e0b, #ef4444)',
+                              color: 'white', cursor: 'pointer', fontSize: '0.7rem', fontWeight: 700,
+                              fontFamily: 'var(--font-sans)',
+                              boxShadow: '0 4px 16px rgba(245,158,11,0.35)',
+                              animation: 'slideDown 0.15s ease'
+                            }}
+                          >
+                            {humanizing === s.id ? <><FiRefreshCw size={11} className="spin" /> Rewriting...</> : <><FiEdit3 size={11} /> Humanize</>}
+                          </button>
+                        </span>
+                      )}
+                      {' '}
                     </span>
                   );
                 })}
               </div>
+
+              {/* Humanize All button */}
+              {sentences.some(s => s.score >= 50 && !humanizedMap[s.id]) && (
+                <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <button
+                    onClick={() => {
+                      sentences.filter(s => s.score >= 50 && !humanizedMap[s.id]).forEach((s, i) => {
+                        setTimeout(() => humanizeSentence(s), i * 300);
+                      });
+                    }}
+                    className="btn-specter"
+                    style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                  >
+                    <FiEdit3 size={14} /> Humanize All Flagged Sentences
+                  </button>
+                  <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
+                    {sentences.filter(s => s.score >= 50 && !humanizedMap[s.id]).length} sentences to rewrite
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         )}
