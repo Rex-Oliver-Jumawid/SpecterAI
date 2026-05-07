@@ -30,7 +30,7 @@ export default function NotebooksPage({ allNotebooks, onCreateNotebook, onDelete
 
   const handleDelete = async (e, id) => {
     e.stopPropagation();
-    if (allNotebooks.length <= 1) return;
+    if (!window.confirm('Delete this notebook? This cannot be undone.')) return;
     await onDeleteNotebook(id);
   };
 
@@ -266,7 +266,6 @@ export default function NotebooksPage({ allNotebooks, onCreateNotebook, onDelete
                     >
                       <FiEdit3 size={13} />
                     </button>
-                    {allNotebooks.length > 1 && (
                       <button
                         onClick={(e) => handleDelete(e, nb.id)}
                         style={{
@@ -279,7 +278,6 @@ export default function NotebooksPage({ allNotebooks, onCreateNotebook, onDelete
                       >
                         <FiTrash2 size={13} />
                       </button>
-                    )}
                   </div>
                 </div>
               );
