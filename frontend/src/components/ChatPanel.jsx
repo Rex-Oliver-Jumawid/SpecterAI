@@ -1,15 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { FiSend, FiTrash2, FiX, FiCheck, FiRotateCcw, FiEdit3, FiFileText } from 'react-icons/fi';
+import { FiSend, FiTrash2, FiX, FiFileText, FiZap } from 'react-icons/fi';
 
 export default function ChatPanel({
   notebookId, chatHistory, onSendMessage, onClearChat,
   isOpen, onClose,
-  // IDE-style props: content editing
-  currentContent, onApplyEdit
+  currentContent, onEditProposed, hasPendingEdit
 }) {
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
-  const [pendingEdit, setPendingEdit] = useState(null); // { originalContent, newContent, description }
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -30,14 +28,13 @@ export default function ChatPanel({
     setSending(true);
     try {
       const result = await onSendMessage(msg);
-      // Check if AI response contains an edit block
+      // Check if AI response contains an edit block — push directly to editor
       if (result?.aiMessage?.content) {
         const editMatch = result.aiMessage.content.match(/```edit\n([\s\S]*?)```/);
-        if (editMatch) {
+        if (editMatch && onEditProposed) {
           const editContent = editMatch[1].trim();
           const description = result.aiMessage.content.replace(/```edit\n[\s\S]*?```/, '').trim();
-          setPendingEdit({
-            originalContent: currentContent,
+          onEditProposed({
             newContent: editContent,
             description: description || 'AI suggested changes to your document.'
           });
@@ -45,17 +42,6 @@ export default function ChatPanel({
       }
     } catch (e) { console.error(e); }
     finally { setSending(false); }
-  };
-
-  const handleAcceptEdit = () => {
-    if (pendingEdit && onApplyEdit) {
-      onApplyEdit(pendingEdit.newContent);
-    }
-    setPendingEdit(null);
-  };
-
-  const handleRejectEdit = () => {
-    setPendingEdit(null);
   };
 
   const quickPrompts = [
@@ -150,7 +136,7 @@ export default function ChatPanel({
 
       {/* Messages */}
       <div style={{ flex: 1, overflow: 'auto', padding: '16px' }}>
-        {chatHistory.length === 0 && !pendingEdit ? (
+        {chatHistory.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '30px 20px' }}>
             <div style={{
               width: '56px', height: '56px', borderRadius: '16px',
@@ -219,52 +205,30 @@ export default function ChatPanel({
               </div>
             ))}
 
-            {/* Pending Edit Preview */}
-            {pendingEdit && (
+            {/* Live-edit indicator — changes are in the Editor, not here */}
+            {hasPendingEdit && (
               <div style={{
-                background: 'var(--bg-card)',
-                border: '1px solid #2563eb',
+                display: 'flex', alignItems: 'center', gap: '10px',
+                padding: '10px 14px',
+                background: 'linear-gradient(135deg, rgba(37,99,235,0.08), rgba(6,182,212,0.05))',
+                border: '1px solid rgba(37,99,235,0.2)',
                 borderRadius: '12px',
-                overflow: 'hidden',
                 animation: 'fadeIn 0.3s ease-out'
               }}>
                 <div style={{
-                  padding: '10px 14px',
-                  background: 'linear-gradient(135deg, rgba(37,99,235,0.1), rgba(6,182,212,0.05))',
-                  borderBottom: '1px solid var(--border-color)',
-                  display: 'flex', alignItems: 'center', gap: '8px'
+                  width: '28px', height: '28px', borderRadius: '8px', flexShrink: 0,
+                  background: 'linear-gradient(135deg, #2563eb, #06b6d4)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center'
                 }}>
-                  <FiEdit3 size={14} style={{ color: '#3b82f6' }} />
-                  <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-                    Suggested Edit
-                  </span>
+                  <FiZap size={14} style={{ color: 'white' }} />
                 </div>
-
-                {pendingEdit.description && (
-                  <div style={{ padding: '10px 14px', fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: 1.5, borderBottom: '1px solid var(--border-color)' }}>
-                    {pendingEdit.description}
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '2px' }}>
+                    Changes are live in your document
                   </div>
-                )}
-
-                <div style={{
-                  maxHeight: '250px', overflow: 'auto', padding: '12px 14px',
-                  fontSize: '0.75rem', lineHeight: 1.7, color: 'var(--text-secondary)',
-                  fontFamily: 'var(--font-serif)', whiteSpace: 'pre-wrap',
-                  background: 'var(--bg-tertiary)'
-                }}>
-                  {pendingEdit.newContent.substring(0, 1000)}
-                  {pendingEdit.newContent.length > 1000 && (
-                    <span style={{ color: 'var(--text-muted)' }}>... ({pendingEdit.newContent.split(/\s+/).length} words total)</span>
-                  )}
-                </div>
-
-                <div style={{ padding: '10px 14px', display: 'flex', gap: '8px' }}>
-                  <button onClick={handleAcceptEdit} className="btn-specter btn-sm" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
-                    <FiCheck size={13} /> Keep Changes
-                  </button>
-                  <button onClick={handleRejectEdit} className="btn-ghost-outline btn-sm" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
-                    <FiRotateCcw size={13} /> Undo
-                  </button>
+                  <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>
+                    Green = added &nbsp;·&nbsp; Red = removed &nbsp;·&nbsp; Use the bar above the editor to accept or discard
+                  </div>
                 </div>
               </div>
             )}

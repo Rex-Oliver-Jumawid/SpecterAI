@@ -161,6 +161,27 @@ function NotebookPage({ notebookId, appState }) {
   const leftRef = useRef(300);
   const rightRef = useRef(280);
 
+  // ═══ Live inline diff — lifted from ChatPanel ═══
+  // When AI returns an edit, we show it directly in the Editor as a diff
+  const [pendingEdit, setPendingEdit] = useState(null);
+
+  const handleEditProposed = useCallback(({ newContent, description }) => {
+    setPendingEdit({
+      originalContent: content,
+      newContent,
+      description: description || 'AI suggested changes to your document.'
+    });
+  }, [content]);
+
+  const handleAcceptEdit = useCallback(() => {
+    if (pendingEdit) setContent(pendingEdit.newContent);
+    setPendingEdit(null);
+  }, [pendingEdit, setContent]);
+
+  const handleRejectEdit = useCallback(() => {
+    setPendingEdit(null);
+  }, []);
+
   // Load this notebook
   useEffect(() => {
     if (notebookId && (!notebook || notebook.id !== notebookId)) {
@@ -273,7 +294,11 @@ function NotebookPage({ notebookId, appState }) {
         <main style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
           <Editor ref={editorRef} content={content} onChange={setContent}
             wordCount={wordCount} documentTitle={title} onTitleChange={setTitle}
-            references={refs} />
+            references={refs}
+            pendingEdit={pendingEdit}
+            onAcceptEdit={handleAcceptEdit}
+            onRejectEdit={handleRejectEdit}
+          />
         </main>
 
         {/* Right: Refs or Review panel */}
@@ -327,7 +352,8 @@ function NotebookPage({ notebookId, appState }) {
         isOpen={showChat}
         onClose={() => setShowChat(false)}
         currentContent={content}
-        onApplyEdit={(newContent) => setContent(newContent)}
+        onEditProposed={handleEditProposed}
+        hasPendingEdit={!!pendingEdit}
       />
     </div>
   );
